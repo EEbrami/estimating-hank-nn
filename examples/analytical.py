@@ -656,9 +656,9 @@ def policy_over_par(model, shock_std=0.0, par=None, par_name="beta", n=100, anal
 
         with torch.no_grad():
             if analytical:
-                Pi, X = policy_analytical(state=state, par=par)
+                X, Pi = policy_analytical(state=state, par=par)
             else:
-                Pi, X = model.policy(state=state, par=par)
+                X, Pi = model.policy(state=state, par=par)
             Pi_list.append(Pi)
             X_list.append(X)
 

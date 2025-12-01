@@ -41,19 +41,20 @@ def train():
         print("Error: Pre-trained model not found. Please run pretrain_hank.py first.")
         return
 
-    print("Starting Short Verification Training (Dry Run)...")
+    print("Starting Short Verification Training (Dry Run with Checkpointing)...")
     
-    # 2. Run for only 100 iterations to verify stability
-    # This tests if the model explodes when hit with Aggregate Shocks (which pre-training didn't have)
+    # 2. Run for only 100 iterations to verify stability AND checkpointing
     model.train_model(
-        iteration=100,      # <--- LOW NUMBER for Dry Run (was 1000 or 10000)
+        iteration=100,      
         batch=64, 
-        print_after=10
+        print_after=10,
+        save_every=50,      # <--- Test checkpointing every 50 steps
+        save_path="save"
     )
     
-    print("Dry Run complete. Saving checkpoint...")
-    model.save("save", "hank_dry_run")
-    print("Success! The code handles aggregate shocks. You are ready for full training.")
+    print("Dry Run complete. Saving final checkpoint...")
+    model.save("save", "hank_dry_run_final")
+    print("Success! Checkpointing verified.")
 
 if __name__ == "__main__":
     train()

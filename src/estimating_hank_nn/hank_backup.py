@@ -270,8 +270,6 @@ class HANKModel(object):
         eta_min=1e-10,
         device="cpu",
         print_after=100,
-        save_every=1000,  # <--- ADD THIS ARGUMENT (Default: Save every 1000 steps)
-        save_path="save"  # <--- ADD THIS ARGUMENT (Where to save)
     ):
         # Save training configuration
         self.training_conf = locals().copy()
@@ -337,11 +335,6 @@ class HANKModel(object):
 
             # Update learning rate
             scheduler.step()
-
-            # Save Checkpoint
-            if i > 0 and i % save_every == 0:
-                self.save(save_path, f"hank_checkpoint_{i}")
-                print(f"Saved checkpoint: {save_path}/hank_checkpoint_{i}.pkl")
 
             # Draw new parameters
             if i % par_draw_after == 0:

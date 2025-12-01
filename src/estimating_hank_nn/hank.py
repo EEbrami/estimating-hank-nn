@@ -209,10 +209,11 @@ class HANKModel(object):
         # 4. Equilibrium Conditions
         
         # Taylor Rule with ZLB
-        # R_t = max(1, R_star * (Pi/Pi_star)^phi_pi * (Y/Y_star)^phi_y)
-        # Log-linear: r_t = max(0, r_star + phi_pi * pi + phi_y * y)
+        # R_t = max(1, R_star * (Pi/Pi_star)^phi_pi * (Y/Y_star)^phi_y * exp(m_shock))
+        # Log-linear: r_t = max(0, r_star + phi_pi * pi + phi_y * y + m_shock)
         # We use Softplus for differentiability
-        R_star_t = 1.0 + par.phipi * Pi + par.phiy * X 
+        # Scale m_shock by 0.0025 (25 basis points standard deviation)
+        R_star_t = 1.0 + par.phipi * Pi + par.phiy * X + e.m_shock * 0.0025
         R_t = self.softplus_zlb(R_star_t)
         
         # NKPC (New Keynesian Phillips Curve)

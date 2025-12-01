@@ -9,6 +9,8 @@ While the original repository provided a RANK example, this branch implements th
 - **HANK Model**: A One-Asset HANK model with heterogeneous households subject to uninsurable income risk and borrowing constraints.
 - **Set Transformer**: A permutation-invariant neural network architecture using **Multihead Attention** (MAB/ISAB) to embed the agent distribution $\Gamma_t$ into a fixed-size vector.
 - **Non-Linear Solution**: Solves for global policy functions, capturing the interaction between inequality and the Zero Lower Bound (ZLB).
+- **Wide Net Strategy**: Trains on a broad range of parameters ($\sigma \in [0.5, 5.0]$) to ensure robustness and avoid extrapolation.
+- **Monetary Shocks**: Includes monetary policy disturbances to capture interest rate volatility.
 - **Neural Network Particle Filter**: A likelihood-based estimation method for non-linear heterogeneous agent models.
 
 ## Installation

@@ -16,18 +16,20 @@ NK_par = {
 }
 
 NK_range = {
-    "beta": torch.distributions.Uniform(0.95, 0.99),
-    "sigma": torch.distributions.Uniform(1.0, 3.0),
+    "beta": torch.distributions.Uniform(0.90, 0.995), # Broader discount factor
+    "sigma": torch.distributions.Uniform(0.5, 5.0),   # Covers low & high risk aversion
     "eta": torch.distributions.Uniform(0.25, 2.0),
     "phi": torch.distributions.Uniform(0.5, 0.9),
-    "phipi": torch.distributions.Uniform(1.25, 2.5),
+    "phipi": torch.distributions.Uniform(1.1, 3.0),   # Broader Taylor rule response
     "phiy": torch.distributions.Uniform(0.0, 0.5),
     "rho_a": torch.distributions.Uniform(0.8, 0.95),
     "sigma_a": torch.distributions.Uniform(0.02, 0.1),
+    "kappa": torch.distributions.Uniform(0.01, 0.3),  # Added kappa range
 }
 
 shock_dist = {
     "zeta": torch.distributions.Normal(0.0, 1.0),
+    "m_shock": torch.distributions.Normal(0.0, 1.0) # Monetary Policy Shock
 }
 
 def train():
@@ -37,6 +39,14 @@ def train():
         # 1. Load the weights you just created in pretrain_hank.py
         model = HANKModel.load("save/hank_pretrained.pkl")
         print("Success: Loaded steady-state weights.")
+        
+        # CRITICAL: Overwrite ranges and shocks with the new wider definitions
+        # The loaded model has the old (narrow) ranges and missing shocks.
+        from estimating_hank_nn.structures import Ranges, Shocks
+        model.range = Ranges(NK_par, NK_range)
+        model.shock = Shocks(shock_dist)
+        print("Success: Updated model with wider ranges and monetary shock.")
+        
     except FileNotFoundError:
         print("Error: Pre-trained model not found. Please run pretrain_hank.py first.")
         return

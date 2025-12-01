@@ -42,5 +42,6 @@ ipython_config.py
 .DS_Store
 
 # Vscode
-.vscode/data/p22i6.dta
+.vscode/
+data/p22i6.dta
 data/*.zip

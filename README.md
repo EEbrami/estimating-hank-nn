@@ -1,38 +1,71 @@
-# Estimating Heterogeneous Agent Models With Neural Networks
-Example code for the simple 3 equation New Keynesian model with analytical solution from "Estimating Heterogeneous Agent Models With Neural Networks" by H. Kase, L. Melosi, and M. Rottner
+# Extending HANK with Neural Networks
 
-# Running the example
+This repository contains an extension of the KMR framework (Kase, Melosi, Rottner, 2022) to solve and estimate a **Heterogeneous Agent New Keynesian (HANK)** model using Neural Networks.
 
-There are few options:
+While the original repository provided a RANK example, this branch implements the full HANK model with a **Set Transformer** to handle the infinite-dimensional distribution of agents.
 
-1. Clone the repository and install the package with `pip install .` in the root directory and run the analytical.py or analytical.ipynb files in the examples folder.
-```
-git clone https://github.com/tseep/estimating-hank-nn.git
-cd estimating-hank-nn
-pip install .
-cd examples
-python analytical.py
-```
-It is perhaps more instructive to open the analytical.py or analytical.ipynb files with vscode or some other python editor and run the code from there.
+## Key Features
 
-2. Run the colab_analytical.ipynb file in the examples folder directly on the Google Colab. https://colab.research.google.com/github/tseep/estimating-hank-nn/blob/main/examples/colab_analytical.ipynb
+- **HANK Model**: A One-Asset HANK model with heterogeneous households subject to uninsurable income risk and borrowing constraints.
+- **Set Transformer**: A permutation-invariant neural network architecture that embeds the agent distribution $\Gamma_t$ into a fixed-size vector.
+- **Non-Linear Solution**: Solves for global policy functions, capturing the interaction between inequality and the Zero Lower Bound (ZLB).
+- **Neural Network Particle Filter**: A likelihood-based estimation method for non-linear heterogeneous agent models.
 
-# Requirements
-The code is written in Python 3.8 and requires the following packages:
-```
-numpy
-scipy
-matplotlib
-torch
-tqdm
-```
-Installing the helper package `estimating_hank_nn` should install these dependencies automatically.
-```
-pip install git+https://github.com/tseep/estimating-hank-nn.git
-```
-or alternatively
-```
-git clone https://github.com/tseep/estimating-hank-nn.git
+## Installation
+
+```bash
+git clone -b set_transformer https://github.com/EEbrami/estimating-hank-nn.git
 cd estimating-hank-nn
 pip install .
 ```
+
+## Usage
+
+### 1. Data Preparation
+
+Download the required data (FRED Macro + SCF Micro) as described in `data/README.md`.
+
+```bash
+python data/process_data.py
+```
+
+### 2. Pre-training
+
+Train the model on the deterministic steady state to ensure stability.
+
+```bash
+python examples/pretrain_hank.py
+```
+
+### 3. Full Training
+
+Train the model over the full state space (Aggregate Shocks + Distribution).
+
+```bash
+python examples/train_hank.py
+```
+
+### 4. Estimation
+
+Run the Neural Network Particle Filter to estimate parameters using real US data.
+
+```bash
+python examples/estimate_hank.py
+```
+
+## File Structure
+
+- `src/estimating_hank_nn/`
+  - `hank.py`: The `HANKModel` class (The "Brain").
+  - `networks.py`: The `SetTransformer` architecture (The "Eye").
+  - `particle_filter.py`: The estimation algorithm.
+- `examples/`
+  - `analytical.py`: The original RANK example (for reference).
+  - `train_hank.py`: Main training loop for HANK.
+  - `estimate_hank.py`: Estimation script.
+
+## References
+
+- Kase, H., Melosi, L., & Rottner, M. (2022). _Estimating Heterogeneous Agent Models with Neural Networks_.
+- Kaplan, G., Moll, B., & Violante, G. L. (2018). _Monetary Policy According to HANK_.
+- Zaheer, M., et al. (2017). _Deep Sets_.

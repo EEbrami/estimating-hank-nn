@@ -7,7 +7,7 @@ While the original repository provided a RANK example, this branch implements th
 ## Key Features
 
 - **HANK Model**: A One-Asset HANK model with heterogeneous households subject to uninsurable income risk and borrowing constraints.
-- **Set Transformer**: A permutation-invariant neural network architecture that embeds the agent distribution $\Gamma_t$ into a fixed-size vector.
+- **Set Transformer**: A permutation-invariant neural network architecture using **Multihead Attention** (MAB/ISAB) to embed the agent distribution $\Gamma_t$ into a fixed-size vector.
 - **Non-Linear Solution**: Solves for global policy functions, capturing the interaction between inequality and the Zero Lower Bound (ZLB).
 - **Neural Network Particle Filter**: A likelihood-based estimation method for non-linear heterogeneous agent models.
 
@@ -21,13 +21,19 @@ pip install .
 
 ## Usage
 
-### 1. Data Preparation
+### 1. Verification (New!)
 
-Download the required data (FRED Macro + SCF Micro) as described in `data/README.md`.
+Before running long training jobs, verify the architecture and stability:
 
 ```bash
-python data/process_data.py
+# 1. Check Set Transformer Architecture (Output Shape)
+python check_arch.py
+
+# 2. Run a Dry Run (100 iterations) to verify stability and checkpointing
+python examples/train_hank.py
 ```
+
+_See `dry_run_log_v2.md` for example output._
 
 ### 2. Pre-training
 
@@ -42,8 +48,11 @@ python examples/pretrain_hank.py
 Train the model over the full state space (Aggregate Shocks + Distribution).
 
 ```bash
+# Edit the script to set iteration=10000 and save_every=1000
 python examples/train_hank.py
 ```
+
+**Checkpointing**: The model now saves checkpoints (e.g., `save/hank_checkpoint_1000.pkl`) automatically. If the run crashes, you can load the latest checkpoint in the script.
 
 ### 4. Estimation
 
@@ -57,7 +66,7 @@ python examples/estimate_hank.py
 
 - `src/estimating_hank_nn/`
   - `hank.py`: The `HANKModel` class (The "Brain").
-  - `networks.py`: The `SetTransformer` architecture (The "Eye").
+  - `networks.py`: The `SetTransformer` architecture (The "Eye") with **Attention**.
   - `particle_filter.py`: The estimation algorithm.
 - `examples/`
   - `analytical.py`: The original RANK example (for reference).
@@ -68,4 +77,4 @@ python examples/estimate_hank.py
 
 - Kase, H., Melosi, L., & Rottner, M. (2022). _Estimating Heterogeneous Agent Models with Neural Networks_.
 - Kaplan, G., Moll, B., & Violante, G. L. (2018). _Monetary Policy According to HANK_.
-- Zaheer, M., et al. (2017). _Deep Sets_.
+- Lee, J., et al. (2019). _Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks_.

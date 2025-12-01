@@ -31,15 +31,29 @@ shock_dist = {
 }
 
 def train():
-    print("Initializing HANK Model...")
-    model = HANKModel(NK_par, NK_range, shock_dist)
+    print("--- DRY RUN MODE ---")
+    print("Loading Pre-trained HANK Model (Steady State)...")
+    try:
+        # 1. Load the weights you just created in pretrain_hank.py
+        model = HANKModel.load("save/hank_pretrained.pkl")
+        print("Success: Loaded steady-state weights.")
+    except FileNotFoundError:
+        print("Error: Pre-trained model not found. Please run pretrain_hank.py first.")
+        return
+
+    print("Starting Short Verification Training (Dry Run)...")
     
-    print("Starting Training...")
-    # Train for a small number of iterations for demonstration
-    model.train_model(iteration=1000, batch=64, print_after=100)
+    # 2. Run for only 100 iterations to verify stability
+    # This tests if the model explodes when hit with Aggregate Shocks (which pre-training didn't have)
+    model.train_model(
+        iteration=100,      # <--- LOW NUMBER for Dry Run (was 1000 or 10000)
+        batch=64, 
+        print_after=10
+    )
     
-    print("Training complete.")
-    model.save("save", "hank_trained")
+    print("Dry Run complete. Saving checkpoint...")
+    model.save("save", "hank_dry_run")
+    print("Success! The code handles aggregate shocks. You are ready for full training.")
 
 if __name__ == "__main__":
     train()

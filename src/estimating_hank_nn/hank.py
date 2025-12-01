@@ -131,15 +131,37 @@ class HANKModel(object):
             par = self.par_draw
 
         # Encode distribution
-        dist_embedding = self.distribution_encoder(state.distribution)
+        # Handle potential MC dimension in distribution
+        dist = state.distribution
+        if dist.ndim == 4: # (mc, batch, agents, dim)
+            mc, batch, agents, dim = dist.shape
+            dist_flat = dist.view(mc * batch, agents, dim)
+            dist_embedding = self.distribution_encoder(dist_flat)
+            dist_embedding = dist_embedding.view(mc, batch, -1)
+        else:
+            dist_embedding = self.distribution_encoder(dist)
         
         # Vector of states and parameters
         input_state = state.zeta
         input_par = par.cat()
 
-        # Expand if necessary
+        # Expand par if necessary (Handle MC dimension)
         if input_state.ndim > input_par.ndim:
-             input_par = input_par.expand(input_state.size(0), -1)
+             diff = input_state.ndim - input_par.ndim
+             for _ in range(diff):
+                 input_par = input_par.unsqueeze(0)
+             
+             expand_shape = list(input_state.shape[:-1]) + [-1]
+             input_par = input_par.expand(*expand_shape)
+
+        # Expand dist_embedding if necessary (Handle MC dimension)
+        if input_state.ndim > dist_embedding.ndim:
+             diff = input_state.ndim - dist_embedding.ndim
+             for _ in range(diff):
+                 dist_embedding = dist_embedding.unsqueeze(0)
+             
+             expand_shape = list(input_state.shape[:-1]) + [-1]
+             dist_embedding = dist_embedding.expand(*expand_shape)
 
         # Concatenate
         input = torch.cat([input_state, input_par, dist_embedding], dim=-1)

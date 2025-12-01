@@ -1,8 +1,10 @@
 import torch
-
+import torch.nn as nn
+import torch.nn.functional as F
+import math
 
 # %% Layer to normalize the inputs
-class NormalizeLayer(torch.nn.Module):
+class NormalizeLayer(nn.Module):
     def __init__(self, lower_bound, upper_bound):
         super(NormalizeLayer, self).__init__()
 
@@ -13,37 +15,79 @@ class NormalizeLayer(torch.nn.Module):
     def forward(self, x):
         return 2 * (x - self.lower_bound) / (self.upper_bound - self.lower_bound) - 1
 
+# %% Multihead Attention Block (MAB)
+class MAB(nn.Module):
+    def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False):
+        super(MAB, self).__init__()
+        self.dim_V = dim_V
+        self.num_heads = num_heads
+        self.fc_q = nn.Linear(dim_Q, dim_V)
+        self.fc_k = nn.Linear(dim_K, dim_V)
+        self.fc_v = nn.Linear(dim_K, dim_V)
+        if ln:
+            self.ln0 = nn.LayerNorm(dim_V)
+            self.ln1 = nn.LayerNorm(dim_V)
+        self.fc_o = nn.Linear(dim_V, dim_V)
 
-# %% Set Transformer for permutation-invariant processing
-class SetTransformer(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def forward(self, Q, K):
+        Q = self.fc_q(Q)
+        K, V = self.fc_k(K), self.fc_v(K)
+
+        dim_split = self.dim_V // self.num_heads
+        Q_ = torch.cat(Q.split(dim_split, 2), 0)
+        K_ = torch.cat(K.split(dim_split, 2), 0)
+        V_ = torch.cat(V.split(dim_split, 2), 0)
+
+        A = torch.softmax(Q_.bmm(K_.transpose(1, 2)) / math.sqrt(self.dim_V), 2)
+        O = torch.cat((Q_ + A.bmm(V_)).split(Q.size(0), 0), 2)
+        O = O if getattr(self, 'ln0', None) is None else self.ln0(O)
+        O = O + F.relu(self.fc_o(O))
+        O = O if getattr(self, 'ln1', None) is None else self.ln1(O)
+        return O
+
+# %% Induced Set Attention Block (ISAB)
+class ISAB(nn.Module):
+    def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False):
+        super(ISAB, self).__init__()
+        self.I = nn.Parameter(torch.Tensor(1, num_inds, dim_out))
+        nn.init.xavier_uniform_(self.I)
+        self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln)
+        self.mab1 = MAB(dim_in, dim_out, dim_out, num_heads, ln=ln)
+
+    def forward(self, X):
+        H = self.mab0(self.I.repeat(X.size(0), 1, 1), X)
+        return self.mab1(X, H)
+
+# %% Pooling by Multihead Attention (PMA)
+class PMA(nn.Module):
+    def __init__(self, dim, num_heads, num_seeds, ln=False):
+        super(PMA, self).__init__()
+        self.S = nn.Parameter(torch.Tensor(1, num_seeds, dim))
+        nn.init.xavier_uniform_(self.S)
+        self.mab = MAB(dim, dim, dim, num_heads, ln=ln)
+
+    def forward(self, X):
+        return self.mab(self.S.repeat(X.size(0), 1, 1), X)
+
+# %% Set Transformer
+class SetTransformer(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_heads=4, num_inds=32):
         super(SetTransformer, self).__init__()
         
-        # Phi network: processes each element independently
-        self.phi = torch.nn.Sequential(
-            torch.nn.Linear(input_dim, hidden_dim),
-            torch.nn.CELU(),
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.CELU()
+        # Encoder: ISAB -> ISAB
+        self.enc = nn.Sequential(
+            ISAB(input_dim, hidden_dim, num_heads, num_inds),
+            ISAB(hidden_dim, hidden_dim, num_heads, num_inds)
         )
         
-        # Rho network: processes the aggregated representation
-        self.rho = torch.nn.Sequential(
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.CELU(),
-            torch.nn.Linear(hidden_dim, output_dim)
+        # Decoder: PMA -> MLP
+        self.dec = nn.Sequential(
+            PMA(hidden_dim, num_heads, 1),
+            nn.Linear(hidden_dim, output_dim)
         )
 
     def forward(self, x):
         # x shape: (batch_size, set_size, input_dim)
-        
-        # Process each element: (batch_size, set_size, hidden_dim)
-        h = self.phi(x)
-        
-        # Aggregate (mean pooling): (batch_size, hidden_dim)
-        h_agg = torch.mean(h, dim=1)
-        
-        # Process aggregate: (batch_size, output_dim)
-        out = self.rho(h_agg)
-        
-        return out
+        x = self.enc(x)
+        x = self.dec(x)
+        return x.squeeze(1)

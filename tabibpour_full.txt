@@ -1,0 +1,1237 @@
+Solving High-Dimensional Dynamic Programming
+Using Set Transformer
+Seyed Alireza Tabibpour1 and Seyed Ali Madanizadeh2
+1 Sharif University of Technology
+2 Sharif University of Technology
+
+March, 2025
+
+Abstract
+This paper proposes a new approach to solving high-dimensional dynamic programming (HDDP) problems in economics by leveraging the Set Transformer architecture
+introduced by Lee et al. [2019]. Traditional dynamic programming methods often face
+challenges due to the curse of dimensionality, and existing neural network architectures, such as Deep Sets, struggle to capture complex, nonlinear interactions in highdimensional data. The Set Transformer, with its advanced attention mechanisms and
+induced set attention blocks, overcomes these limitations by efficiently approximating
+permutation-invariant functions, making it particularly well-suited for heterogeneous
+agent models. Using a methodology based on minimizing Euler residuals, this study
+ensures that the model adheres to economic theory while achieving superior accuracy and scalability. Comparisons with Deep Sets across varying model complexities,
+including scenarios with linear-quadratic benchmarks and more nonlinear settings,
+demonstrate the Set Transformer’s significant advantages. These results underscore
+its potential to advance computational economics by providing robust and efficient
+tools for analyzing complex economic dynamics.
+Keywords: High-Dimensional Dynamic Programming (HDDP), Heterogeneous Agent
+Models, Neural Networks, Set Transformer, Permutation Invariance
+
+1
+
+Introduction
+
+Dynamic programming is a fundamental tool in economics, essential for solving sequential decision-making problems where outcomes depend on past and present decisions.
+However, as the number of state variables increases, traditional dynamic programming
+methods face the "curse of dimensionality," making computation infeasible. This issue
+becomes particularly severe in heterogeneous agent models, which have become central
+to modern macroeconomic analysis. These models, used to study distributions of wealth,
+firm dynamics, productivity, and more, inherently involve high-dimensional state spaces
+due to the presence of many interacting agents. As a result, solving them requires computational methods that can scale with dimensionality. Recent advancements in deep
+learning, such as the deep set architecture introduced by Zaheer et al. [2017], have provided new avenues for approximating solutions in these high-dimensional settings.
+The increasing complexity of economic models, particularly those involving highdimensional state spaces, has rendered traditional dynamic programming methods impractical. Although the deep set architecture offers some relief by leveraging permutation
+invariance, it often struggles to accurately model the intricate dependencies and interactions among multiple state variables in these complex environments. This limitation can
+be overcome by the "Set Transformer" architecture introduced by Lee et al. [2019], which
+extends the capabilities of Deep Sets by incorporating attention mechanisms. These mechanisms allow the model to capture higher-order interactions among elements in a set,
+making it well-suited for high-dimensional economic problems where agent heterogeneity and interaction structures are critical.
+The primary objective of this study is to develop a new approach for solving highdimensional dynamic programming problems that frequently arise in heterogeneous agent
+models. Building on recent advances in deep learning and set-based architectures, this
+study introduces a Set Transformer-based model specifically tailored to these problems.
+The model is evaluated against existing methods in terms of accuracy, scalability, and
+1
+
+computational efficiency, and its effectiveness is demonstrated across a range of economic
+environments.
+The Set Transformer is fundamentally built upon attention mechanisms, a powerful
+innovation in machine learning. Attention mechanisms allow neural networks to dynamically focus on different parts of the input data, making them particularly effective at
+capturing relationships between elements in complex datasets. In traditional sequencebased models, attention mechanisms enable the model to prioritize certain parts of the
+sequence based on their relevance to the task at hand.
+Expanding on the capabilities of attention mechanisms, the Set Transformer is specifically designed to handle sets of data, where the order of elements is irrelevant. This
+permutation-invariant architecture is particularly well suited for heterogeneous agent
+models, where agents are indistinguishable apart from their state variables, and the aggregate outcome depends on the distribution, not the ordering, of individual agents. In
+such settings, accurately modeling the interactions among agents requires methods that
+respect this invariance. By leveraging attention mechanisms, the Set Transformer can capture complex dependencies between elements in a set, offering a more robust and flexible
+approach to solving high-dimensional dynamic programming problems than previous
+architectures like Deep Sets.
+The model in this study is a permutation-invariant heterogeneous agent model, adapted
+from the Lucas Jr and Prescott [1971] model of investment under uncertainty, involving multiple firms. Kahou et al. [2021] utilized the Deep Sets architecture to solve this
+model, which serves as an ideal test case for several reasons. In the special case of a
+linear demand function, the model aligns with a well-known linear-quadratic (LQ) solution, as presented by Ljungqvist and Sargent [2018] to illustrate recursive competitive
+equilibria. This provides an exact benchmark to validate our methods. Additionally,
+the model is straightforward enough to offer clarity while being rich enough to capture
+high-dimensional dynamic programming’s core features. Moreover, by adjusting certain
+
+2
+
+parameters, it also transitions to a nonlinear regime, allowing us to assess the robustness
+and accuracy of the proposed approach under more complex conditions.
+The contribution of this study is to introduce a Set Transformer-based solution to highdimensional dynamic programming problems in economics, addressing several key limitations of existing deep learning approaches. While deep learning is a relatively new and
+evolving tool for such problems, current methods often lack scalability, suffer from interpretability issues, and may not generalize well across different economic models. The Set
+Transformer architecture, with its attention-based design, provides a more robust and efficient alternative by better capturing complex interactions within high-dimensional and
+permutation-invariant economic settings.
+One of the key motivations for this research is the need for more efficient and accurate computational methods in economic modeling. This study addresses longstanding computational challenges in dynamic programming problems with high-dimensional
+state spaces, particularly those arising in heterogeneous agent models. It proposes a solution based on the Set Transformer architecture, demonstrating how attention mechanisms
+can effectively manage the complexity of permutation-invariant settings. The proposed
+method achieves substantial improvements in both accuracy and scalability compared to
+existing deep learning methods, as shown by numerical results across a range of model
+specifications. These improvements facilitate the analysis of more complex economic environments and open the door to a broader class of applications in macroeconomics and
+beyond. In doing so, this work not only overcomes key limitations of current approaches
+but also provides a foundation for future innovations in the use of advanced neural architectures in economic modeling.
+The rest of the paper is structured as follows. Section 2 discusses related literature.
+Section 3 presents the model, describing the permutation-invariant heterogeneous agent
+setup and its mathematical formulation. Section 4 details our computational methodology, including the use of the Set Transformer architecture, sampling of state variables,
+
+3
+
+and neural network training methodology. Section 5 presents the results, focusing on
+the Set Transformer’s performance in comparison to previous approaches. Finally, Section 6 concludes. We explain the foundational concepts of neural networks and the Deep
+Sets architecture in Appendices A and B, and provide a discussion of the transversality
+condition in Appendix C.
+
+2
+
+Literature Review
+
+The challenge of solving high-dimensional dynamic programming (HDDP) problems has
+been a focal point in economic research, primarily due to the computational difficulties
+imposed by the curse of dimensionality. Traditional methods, such as the Krusell-Smith
+(KS) approach (Krusell and Smith [1998]), have been instrumental in addressing these
+challenges by approximating the distribution of states using a small number of moments.
+However, as noted by Krusell and Smith [1998], this method is limited in its ability
+to handle models with multiple shocks and endogenous states, particularly when nonlinearities are involved (Den Haan [2010]).
+To overcome these limitations, alternative approaches such as local perturbation techniques have been developed. Schmitt-Grohé and Uribe [2004] and Reiter [2009] contributed significantly to this field by expanding policy functions around a deterministic steady state. While effective for small stochastic deviations, these methods are less
+reliable in scenarios where aggregate shocks induce significant non-linear or non-local effects, such as those encountered in macro-finance models with zero lower bounds (ZLB)
+or large aggregate shocks (Boppart et al. [2018]; Bayer and Luetticke [2020]).
+The advent of deep learning has opened new avenues for overcoming the curse of
+dimensionality in HDDP problems. Rust [1997] pioneered the use of computational techniques to solve dynamic discrete choice models, laying the groundwork for integrating
+machine learning into dynamic programming. Zaheer et al. [2017] introduced the "Deep
+
+4
+
+Sets" architecture, which is particularly useful for models involving heterogeneous agents
+due to its ability to handle permutation invariance. However, while Deep Sets provided
+a significant advancement, they often fall short in capturing the full complexity of interactions within high-dimensional data, necessitating more advanced architectures.
+In this context, Han et al. [2021] developed DeepHAM, a deep learning-based method
+that uses generalized moments to efficiently represent state distributions in HDDP problems. DeepHAM’s use of permutation-invariant generalized moments improves interpretability and computational efficiency by directly simulating paths rather than optimizing over an objective function that includes the Bellman residual. This approach contrasts
+with other deep learning methods, such as those by Maliar et al. [2021] and Azinovic et al.
+[2022], which also use deep learning to solve HA models with aggregate shocks but do
+not address permutation invariance as effectively. DeepHAM has demonstrated superior
+global accuracy and efficiency, reducing Bellman equation errors significantly compared
+to traditional methods like KS.
+Moreover, DeepHAM offers a novel solution to the constrained efficiency problem
+in HA models, a challenge that has not been adequately addressed by previous methods. The ability to solve the constrained efficiency problem as quickly as the competitive
+equilibrium makes DeepHAM a powerful tool for studying optimal fiscal and monetary
+policies in models with aggregate shocks. However, the implementation of such models is complex, and the need for extensive computational resources remains a significant
+concern (Han et al. [2021]).
+In parallel, Kahou et al. [2021] advanced the literature by proposing a method that
+exploits symmetry in the law of motion and the value function in HDDP problems. Their
+approach leverages the concentration of measure and advanced deep learning techniques
+to efficiently calculate high-dimensional expectations using a single Monte Carlo draw.
+This method significantly reduces the computational complexity traditionally associated
+with these problems, allowing for the global solution of a multi-firm investment model
+
+5
+
+under uncertainty-a scenario where traditional methods like the KS approach or local
+perturbations would struggle. Kahou et al. [2021]’s work also builds upon foundational
+techniques in the field, including the adaptive sparse grid method of Krueger and Kubler
+[2004] and the value function iteration on grids developed by Judd et al. [2017].
+While the "Deep Sets" architecture introduced by Zaheer et al. [2017] marked a significant improvement in handling permutation invariance in models with heterogeneous
+agents, it has limitations in capturing complex and high-order interactions within highdimensional data. To address these limitations, the "Set Transformer" architecture was
+proposed by Lee et al. [2019]. The "Set Transformer" builds upon the foundation laid by
+"Deep Sets" by incorporating self-attention mechanisms, which allow for more nuanced
+and flexible modeling of relationships within a set.
+Attention mechanisms have become a cornerstone in modern machine learning models, particularly those dealing with complex data structures. The concept was first introduced by Bahdanau et al. [2014] to improve the performance of neural machine translation models. By allowing the model to selectively concentrate on relevant parts of the
+input sequence, attention mechanisms significantly enhanced the ability of neural networks to capture dependencies across different parts of the data.
+The pivotal moment in the evolution of attention mechanisms came with the introduction of the Transformer model by Vaswani [2017]. This model utilized self-attention
+mechanisms, enabling each element in a sequence to attend to all other elements simultaneously, thus eliminating the need for recurrent layers. The self-attention mechanism
+proved to be particularly effective in processing sequential data more efficiently and accurately, setting a new standard in natural language processing and beyond.
+Building on the principles established by these earlier works, Lee et al. [2019] extended the concept of attention from sequences to sets with the Set Transformer. Unlike
+traditional models that process data in a specific order, the Set Transformer applies selfattention mechanisms in a permutation-invariant manner. This means that the order of
+
+6
+
+elements in the input set does not affect the output, making the Set Transformer uniquely
+suited for tasks where the order of inputs is irrelevant but their relationships are critical.
+This architecture has demonstrated significant potential in economic modeling, particularly in approximating policy functions where the interactions among variables need to
+be accurately captured regardless of their arrangement.
+Unlike Deep Sets, which use a simple pooling function to aggregate information, the
+"Set Transformer" leverages attention layers to dynamically weigh the importance of different elements within a set. This attention-based approach allows the Set Transformer
+to capture higher-order interactions, making it particularly well-suited for complex economic models where the relationships between agents or variables are not merely additive but involve intricate dependencies. By processing the model’s inputs in a permutationinvariant manner, the Set Transformer can effectively model the interactions among multiple state variables, regardless of their order. This flexibility and power have been shown
+to significantly improve both the accuracy and scalability of solutions to high-dimensional
+dynamic programming problems, offering a robust framework for such models. As a result, the Set Transformer presents a promising direction for future research in dynamic
+programming and economic modeling, providing a more precise and efficient alternative
+to traditional methods.
+Recent studies highlight the Set Transformer’s effectiveness beyond economics, particularly in applied mathematics and quantitative finance, such as option pricing. Aghapour
+et al. [2025] employed the Set Transformer architecture to solve a permutation-invariant
+partial differential equation (PDE), noting its suitability for problems in which payoff
+functions exhibit permutation invariance. In option pricing, where most payoff functions
+are permutation-invariant, the Set Transformer demonstrated strong performance, providing accurate solutions efficiently. This application underscores the versatility of the
+Set Transformer in handling permutation-invariant structures across diverse quantitative
+fields.
+
+7
+
+The transversality condition plays a critical role in dynamic programming models by
+ensuring that solutions are economically meaningful and stable over time. Traditional numerical methods often require explicit enforcement of this condition to prevent explosive
+trajectories and guarantee convergence. However, recent advancements in deep learning have shown that neural networks can implicitly satisfy the transversality condition
+without explicitly imposing it. Kahou et al. [2021] demonstrated that over-parameterized
+neural networks trained with stochastic gradient descent (SGD) naturally converge to solutions that respect boundary behavior, driven by the regularization effects of SGD. Similarly, Kahou et al. [2022] highlighted that deep learning approximations inherently satisfy
+long-run boundary conditions, such as the transversality condition. They attributed this
+to the implicit bias of deep learning toward functions with small derivatives, which aligns
+with the class of solutions needed in dynamic models. These findings underscore the suitability of deep learning frameworks for solving high-dimensional dynamic programming
+problems without explicitly solving for boundary conditions at infinity.
+
+3
+
+Permutation-Invariant Heterogeneous Agent Model
+
+This paper focuses on a class of heterogeneous agent models that arise frequently in
+macroeconomics, particularly those involving recursive decision-making under uncertainty and high-dimensional state spaces. As an illustrative example, we consider a variation of the investment model introduced by Lucas Jr and Prescott [1971], involving N
+symmetric firms. This model, also examined by Kahou et al. [2021] using Deep Sets,
+serves as a benchmark for evaluating our approach. It is widely used in macroeconomic
+theory, including in Ljungqvist and Sargent [2018] as a foundational example for introducing recursive competitive equilibria. The model is tractable, yet rich enough to capture the computational challenges that arise in high-dimensional dynamic programming.
+In its linear specification, it admits a known linear-quadratic (LQ) solution, allowing ex-
+
+8
+
+act comparison with our method. By modifying certain parameters, it can be extended to
+nonlinear settings, enabling us to test the robustness and performance of our approach.
+While we focus on this model for exposition and validation, the proposed method is
+applicable to a broad set of economic models with similar structural features, particularly
+permutation-invariant heterogeneous agent models in which agents are indistinguishable
+apart from their state variables. This includes applications in consumption-savings problems, firm dynamics, and production networks, where the aggregate outcome depends
+on the distribution, not the identity, of agents.
+The model describes an industry consisting of N > 1 firms, each producing a differentiated variety of a good. These varieties are imperfect substitutes, and the degree of
+substitutability is governed by the parameter ν. When ν = 1, the varieties become perfect
+substitutes and effectively identical. The output x of firm i is produced using x units of
+capital. The aggregate production or capital of the industry is represented by the vector
+X ≡ [ x1 , . . . , x N ]⊤ . The inverse demand function for the industry is given by
+
+p ( X ) = α0 −
+
+α1 N ν
+xi
+N i∑
+=1
+
+(1)
+
+where ν ≥ 1 is a parameter that introduces nonlinearity into the demand function
+when ν > 1. Each firm takes the price p(X) as given, without considering the impact of
+its individual decisions on the overall price level. Firms face adjustment frictions, and
+investing u incurs a cost proportional to γ2 u2 .
+The law of motion for capital is described by:
+
+xi′ = (1 − δ) xi + ui + σwi + ηω,
+
+for i ∈ {1, . . . , N }
+
+(2)
+
+where wi ∼ N (0, 1) is an i.i.d. idiosyncratic shock, and ω ∼ N (0, 1) is an i.i.d. aggregate shock common to all firms. Each firm chooses its investment u to maximize its
+expected lifetime utility:
+
+9
+
+"
+E
+
+∞
+
+∑ βt
+
+t =0
+
+
+
+γ 
+p(Xt ) xt − u2t
+2
+
+#
+
+Without loss of generality, we can assume that x = x1 . The recursive problem of the
+firm, taking the exogenous policy û(·, X) for all other firms as given, can be expressed as:
+
+v( x, X) = max p(X) x − γ2 u2 + βE[v( x ′ , X′ )]
+s.t.
+
+
+
+
+
+u ≥0
+
+(3)
+
+x ′ = (1 − δ) x + u + σw + ηω
+
+
+ x ′ = (1 − δ) xi + û( xi , X) + σwi + ηω, for i ∈ {1, . . . , N }
+i
+
+Note that w1 = w, and the expectation in Equation 3 is taken over the i.i.d. idiosyncratic shocks {w, w2 , . . . , w N } and the aggregate shock ω. The term x ′ = (1 − δ) x + u +
+σw + ηω represents the law of motion of the firm when it decides to invest u. Additionally, xi′ = (1 − δ) xi + û( xi , X) + σwi + ηω for i ∈ {2, . . . , N } is the firm’s forecast of the
+evolution of the capital distribution among all firms given the exogenous policy. Finally,
+x1′ = (1 − δ) x1 + û( x1 , X) + σw1 + ηω represents the contribution of the firm’s own policy
+to the aggregate state X. Now, we can define a symmetric competitive equilibrium.
+Definition 1. An equilibrium is û( x, X ) and v( x, X ) such that given û( x, X ), v( x, X ) is the
+value function solving Bellman Equation in (3) for each agent, and u( x, X ) is the optimal policy
+function. Moreover, the optimal policy is symmetric, i.e., u( x, X ) = û( x, X ).
+For a permutation-invariant P(X), we can take the first-order conditions (F.O.C.s) and
+the envelope condition and derive the equilibrium conditions, which can be expressed
+through the Euler equation and the Law of Motion1 :
+
+
+
+γu( x, X) = βE p(X′ ) + γ(1 − δ)u( x ′ , X′ )
+
+xi′ = (1 − δ) xi + û( xi , X) + σwi + ηω,
+
+for i ∈ {1, . . . , N }
+
+1 Kahou et al. [2021] provided a rigorous derivation of this Euler equation.
+
+10
+
+(4)
+
+(5)
+
+An essential feature of this model is the permutation invariance of both the policy
+function u( x, X) and the value function v( x, X). Specifically, for any permutation π ∈ S N
+(the symmetric group of N elements), the following holds:
+
+u( x, πX) = u( x, X),
+
+v( x, πX) = v( x, X)
+
+(6)
+
+This property was proven by Kahou et al. [2021] and arises from the fact that each
+firm’s decision impacts the aggregate state X only through its contribution to the total,
+rather than the order of its position in the state vector. Economically, this implies that
+the decisions of the firms are symmetric with respect to each other; no firm has a unique
+influence on the aggregate outcome beyond its production level, making the policy and
+value functions invariant to the permutation of firms’ capital levels.
+This permutation invariance is central to our approach as it justifies the use of the Set
+Transformer, an architecture specifically designed to handle such symmetry in output.
+The ultimate goal of this paper is to use the problem’s structure to design a function
+class H that accurately approximates the policy function u( x, X), enabling the efficient
+computation of the equilibrium policy function using the Set Transformer architecture.
+
+4
+
+Computational Methodology
+
+In this section, we present the quantitative methodology used to solve the high dimensional dynamic programming problem within our heterogeneous agent model. Our approach leverages the Set Transformer architecture, chosen for its capacity to handle permutation invariant structures, making it well-suited for our economic setting where the
+ordering of agents does not affect outcomes.
+Kahou et al. [2021] applied the Deep Sets architecture to solve the same model we
+consider in this study. Deep Sets provided a foundational approach for handling permutation invariance, capturing symmetric relationships among agents. However, the Set
+11
+
+Transformer extends this framework by using attention mechanisms to model complex,
+higher-order dependencies among elements in the input set. This allows it to capture
+interactions that depend not just on individual agent characteristics, but also on their
+joint configurations and mutual influences, a feature particularly relevant in economic
+environments with strategic or aggregate effects. Building on this, we propose a new
+method that applies the Set Transformer architecture to high-dimensional dynamic programming problems in heterogeneous agent models, aiming to improve both accuracy
+and scalability. For readers unfamiliar with neural networks, we provide an overview in
+Appendix A, and we introduce the Deep Sets architecture with its mathematical formulation in Appendix B.
+The core of our method involves approximating the policy function u( x, X ) by training
+the Set Transformer to minimize Euler residuals. Specifically, the Euler equation, derived
+from the model’s first-order conditions, provides a necessary condition for optimality. By
+minimizing these residuals across a comprehensive range of state variables, we ensure
+that the approximated functions adhere closely to economic theory while maintaining
+computational efficiency and scalability. We also note that the transversality condition is
+not imposed explicitly but is implicitly satisfied through the training process, as discussed
+in Appendix C.
+The subsections that follow outline the key components of this process. We begin
+with an overview of the Set Transformer architecture and its features that make it suitable
+for permutation-invariant data. Next, we discuss neural network training process and
+sampling techniques for preparing the state variables used in training.
+
+4.1
+
+Set Transformer Architecture
+
+The Set Transformer is a neural network architecture specifically designed for processing
+sets of data, where the order of the elements in the set does not matter. This permutation invariance property makes the Set Transformer particularly suitable for tasks in
+12
+
+economics, such as approximating policy and value functions in dynamic programming,
+where the order of inputs (e.g., state variables) should not influence the outcome.
+The core idea behind the Set Transformer is to ensure that the output of the model is
+invariant to the permutation of the input set. Formally, if X = { x1 , x2 , . . . , xn } is a set,
+then for any permutation π of the indices, the Set Transformer should satisfy
+
+SetTransformer({ xπ (1) , xπ (2) , . . . , xπ (n) }) = SetTransformer({ x1 , x2 , . . . , xn })
+
+(7)
+
+This is achieved through the use of self-attention mechanisms that operate over the
+entire set, treating each element symmetrically and ensuring that the output respects this
+permutation invariance.
+Consider a set of n query vectors, each with a dimension dq , represented by Q ∈ Rn×dq .
+An attention function, denoted Att( Q, K, V; ω ), maps these queries Q to outputs using
+nv key-value pairs, where K ∈ Rnv ×dq and V ∈ Rnv ×dv :
+
+
+Att( Q, K, V; ω ) = ω QK ⊤ V.
+
+(8)
+
+In this setup, the matrix product QK ⊤ ∈ Rn×nv calculates the similarity between each
+query-key pair, and the resulting values are weighted by an activation function ω. The
+output, ω ( QK ⊤ )V, is a weighted sum of the values in V, where a higher similarity score
+between a query and key increases the influence of the corresponding value.
+Multi-head attention, introduced by Vaswani [2017], extends this process by computing multiple attention functions in parallel. Instead of using a single attention function,
+multi-head attention projects Q, K, and V into h subspaces with dimensions dqM , dkM , and
+dvM , respectively. Each head independently applies its own attention function Att(·; ω j ),
+and the outputs from all heads are concatenated and linearly transformed:
+
+MultiHead( Q, K, V; λ, ω ) = concat(O1 , . . . , Oh )W O ,
+13
+
+(9)
+
+where
+O j = Att( QWjQ , KWjK , VWjV ; ω j ).
+
+(10)
+
+In this multi-head attention framework, the function MultiHead(·, ·, ·; λ) includes learnM
+
+M
+
+able parameters λ = {WjQ , WjK , WjV }hj=1 , with matrices WjQ , WjK ∈ Rdq ×dq , WjV ∈ Rdv ×dv ,
+M
+
+and WO ∈ Rhdv ×d .
+In the Set Transformer architecture the Permutation Equivariant (Induced) Set Attention Blocks consist of two main types of blocks: the Set Attention Block (SAB) and the
+Induced Set Attention Block (ISAB). Both blocks use attention mechanisms to process set
+data, but they address different computational needs.
+Given two sets of d-dimensional vectors, X ∈ Rn×d and Y ∈ Rn×d , Multihead Attention Block (MAB) with parameters ω is defined as
+
+MAB( X, Y ) = LayerNorm( H + rFF( H )),
+
+(11)
+
+H = LayerNorm( X + Multihead( X, Y, Y; ω )).
+
+(12)
+
+where
+
+In this setup, Multihead( X, Y, Y; ω ) computes multi-head self-attention among elements in X and Y, with each attention head adjusted by the function ω. Layer normalization (see Ba et al. [2016]), represented as LayerNorm, and a row-wise feedforward layer,
+denoted rFF, are then applied, with rFF acting independently on each instance in H. Using the MAB, Set Attention Block (SAB) is defined as
+
+SAB( X ) = MAB( X, X ).
+
+(13)
+
+By stacking multiple SABs, higher-order interactions between set elements can be encoded effectively. However, the SAB has a time complexity of O(n2 ), which can make it
+computationally expensive for large sets as it requires calculating pairwise interactions
+14
+
+for all elements (Lee et al. [2019]).
+The Induced Set Attention Block (ISAB) is designed to address this computational limitation by introducing a set of m learnable vectors known as inducing points, which serve
+as intermediaries that reduce the computational load. Given an input set X ∈ Rn×d and a
+set of inducing points I ∈ Rm×d , the ISAB first computes an intermediate representation
+H by applying attention from the inducing points I to the input set X:
+
+H = MAB( I, X ).
+
+(14)
+
+Next, it computes attention from X to H:
+
+ISABm ( X ) = MAB( X, H ).
+
+(15)
+
+This two-stage process allows the inducing points to act as a lower-dimensional projection of the input set, capturing its global features and making it more efficient to process, especially with larger sets. This design reduces the time complexity to O(nm), where
+m is typically much smaller than n, making ISAB suitable for larger input sets without
+sacrificing the model’s ability to capture complex dependencies.
+Both SAB and ISAB are permutation equivariant, meaning their outputs remain consistent regardless of the order of elements in the input set, which is a key property for set
+data, where the order of elements should not affect the model’s output (Lee et al. [2019]).
+Before continuing with the rest of the architecture, Figures 1, 2, and 3 illustrate the
+structures of the Multihead Attention Block (MAB), Self-Attention Block (SAB), and Induced Set Attention Block (ISAB), respectively. These visual representations provide a
+clearer understanding of how attention mechanisms are applied within the Set Transformer framework.
+In traditional permutation-invariant neural networks, a common approach to aggregating features is by taking a dimension-wise average or maximum of the feature vectors
+15
+
+Figure 1: Multihead Attention Block (MAB)
+
+Figure 2: Self-Attention Block (SAB)
+in a set. Instead, the Set Transformer utilizes Pooling by Multihead Attention (PMA),
+which aggregates features by applying multihead attention on a learnable set of k seed
+vectors. Given an encoded set of features Z ∈ Rn×d , where n represents the number of
+elements and d their dimensionality, the PMA with k seed vectors S ∈ Rk×d is defined as
+
+PMAk ( Z ) = MAB(S, rFF( Z )),
+
+(16)
+
+where rFF is a row-wise feedforward layer that preprocesses each feature independently
+before applying attention.
+The output of PMAk is a set of k elements, each representing an aggregated feature of
+16
+
+Figure 3: Induced Set Attention Block (ISAB)
+the input set. In many applications, a single seed vector (k = 1) is sufficient for producing a single pooled representation. However, for tasks such as amortized clustering that
+require multiple outputs, we use k seed vectors. To capture correlations between the k
+outputs, a Set Attention Block (SAB) is applied to the PMA output, resulting in the final
+aggregation:
+H = SAB(PMAk ( Z )).
+
+(17)
+
+This self-attention step after pooling helps model dependencies among multiple outputs, such as clusters in an amortized clustering problem.
+The use of attention-based aggregation is advantageous because it enables the model
+to assign variable importance to instances within the set, depending on their relevance to
+the target output. For instance, in a task where the target is the maximum value within a
+set, PMA allows the model to attend primarily to the largest instance, optimizing feature
+aggregation accordingly.
+Using the components discussed, the overall architecture of the Set Transformer comprises an encoder and a decoder. The encoder, represented as Encoder : X → Z ∈ Rn×d ,
+consists of stacked Set Attention Blocks (SABs) or Induced Set Attention Blocks (ISABs),
+which allows for flexible selection between complexity and computational efficiency. For
+
+17
+
+instance, one could construct the encoder as
+
+Encoder( X ) = SAB(SAB( X ))
+
+(18)
+
+Encoder( X ) = ISABm (ISABm ( X )).
+
+(19)
+
+or
+
+When stacking ℓ layers of SABs, the time complexity becomes O(ℓn2 ), while for ISABs,
+it becomes O(ℓnm), which is significantly lower and allows for faster processing on larger
+sets without substantial losses in representational capacity.
+Once the encoder has transformed the input data X ∈ Rn×dx into encoded features
+Z ∈ Rn×d , the decoder aggregates these features into a fixed number of output vectors.
+These aggregated vectors are subsequently fed into a feedforward network to generate
+the final outputs. In cases where the pooling by multihead attention (PMA) uses k > 1
+seed vectors, it is typically followed by SABs to model any correlations between the k
+output vectors. Formally, the decoder can be expressed as
+Decoder( Z; λ) = rFF(SAB(PMAk ( Z ))) ∈ Rk×d ,
+
+(20)
+
+PMAk ( Z ) = MAB(S, rFF( Z )) ∈ Rk×d .
+
+(21)
+
+where
+
+This attention-based pooling allows the model to flexibly assign importance to elements within the set, improving feature aggregation in situations where different elements contribute variably to the target output.
+
+4.2
+
+Justification for Using Set Transformer
+
+In the context of solving high-dimensional dynamic programming problems, the Set Transformer can be used to approximate permutation-invariant functions, such as the policy
+18
+
+function u( x, X) or the value function v( x, X). The permutation invariance ensures that
+the model respects the symmetry in the input data, where the order of elements in the set
+(e.g., different firms in an economy) should not affect the output.
+The choice of the Set Transformer architecture in this research is driven by its unique
+ability to address the limitations inherent in previous architectures, such as Deep Sets,
+particularly when applied to high-dimensional dynamic programming problems.
+One of the primary limitations of Deep Sets is their reliance on simple pooling operations to aggregate information across input elements. While this approach ensures permutation invariance, it restricts the network’s ability to capture complex, non-additive
+interactions among agents. In many economic models, especially those involving heterogeneous firms or agents, individual decisions depend not only on the aggregate state but
+also on the configuration of the distribution itself. For example, a firm’s optimal investment decision may be influenced by the relative positions of its competitors in the state
+space, not just the average or total capital. The Set Transformer addresses this by using attention mechanisms that allow each element to interact with others directly, enabling the
+network to learn richer, context-dependent representations. This leads to more accurate
+approximations of the policy and value functions in environments where distributional
+detail and agent-level interactions are economically meaningful.
+The Set Transformer addresses these limitations through its use of attention mechanisms, which dynamically weigh the importance of different elements in the set based
+on their relevance to the task at hand. Unlike Deep Sets, the Set Transformer does not
+rely solely on a pooling function but instead uses self-attention to capture intricate relationships within the data. This allows the model to represent more complex interactions
+between the elements of a set, which is particularly valuable in high-dimensional settings
+where the relationships between variables are not merely additive but involve complex
+dependencies.
+Moreover, the Set Transformer incorporates the Induced Set Attention Block (ISAB),
+
+19
+
+which further enhances its ability to manage large sets efficiently. By introducing a set
+of inducing points, the ISAB reduces the computational complexity associated with selfattention while preserving the model’s capacity to capture detailed interactions. This
+innovation is particularly important for solving high-dimensional dynamic programming
+problems, where the state space can be vast, and computational efficiency is crucial.
+Further supporting the choice of the Set Transformer, Lee et al. [2019] have demonstrated its superiority over Deep Sets in approximating critical permutation-invariant
+functions, such as the minimum, maximum, and clustering functions. These functions are
+fundamental in various tasks where capturing the nuanced relationships within a set is
+crucial. In the context of our economic model, where the goal is to find the nonlinear relationships between the decisions of different firms, the Set Transformer’s ability to handle
+such complexities makes it a more powerful tool compared to simpler architectures like
+Deep Sets. By leveraging the advanced attention mechanisms of the Set Transformer, this
+research anticipates achieving more accurate and robust approximations of the policy and
+value functions, thereby offering a significant improvement in solving high-dimensional
+dynamic programming problems.
+
+4.3
+
+Training the Neural Network and Solving the Model
+
+In this section, we describe the methodology for training the Set Transformer architecture to approximate the policy function u( x, X) and the value function v( x, X) within the
+framework of our heterogeneous agent model. The training process is driven by minimizing the Euler residuals, which are derived from the Euler equation, across a wide range
+of state variables.
+The Euler equation, derived from the first-order conditions of the model, provides a
+necessary condition for optimality in dynamic settings. For the given model, the Euler
+
+20
+
+equation is expressed as
+
+
+γu( x, X) = βE p(X′ ) + γ(1 − δ)u( x ′ , X′ )
+
+(22)
+
+where u( x, X) is the policy function, X represents the state of the system, and the expectation E is taken over the stochastic components w and ω that influence the evolution
+of the state variables.
+The Euler residual for a particular state ( x, X) is defined as the difference between the
+left-hand side and the right-hand side of the Euler equation.
+
+
+
+Residual( x, X) = γu( x, X) − βE p(X′ ) + γ(1 − δ)u( x ′ , X′ )
+
+(23)
+
+To train the neural network, we aim to minimize these residuals across a wide range
+of state variables. The loss function used in training is the Mean Squared Error (MSE) of
+the Euler residuals, defined as
+
+L(θ ) =
+
+2
+1 M 
+Residual( x j , X j ; θ ) ,
+∑
+M j =1
+
+(24)
+
+where θ represents the parameters of the neural network, and M is the number of sampled
+state points.
+To ensure that the neural network generalizes effectively across the entire state space,
+it is crucial to sample a comprehensive range of state variables ( x, X). The state variables
+are drawn from a distribution that represents the relevant economic scenarios, covering
+both typical and extreme conditions. This approach allows the network to accurately
+learn the policy and value functions across various economic environments.
+To achieve better generalization, state variables are sampled by simulating their trajectories based on an initial policy guess. This simulation is repeated multiple times, introducing new independent and identically distributed shocks in each iteration to capture a
+
+21
+
+broader range of possible states. For each sampled state, the neural network predicts the
+policy function u( x, X), and the Euler residual is computed accordingly. These residuals
+form the basis of the loss function, guiding the training process by minimizing deviations
+from the optimality conditions across diverse scenarios.
+
+5
+
+Results
+
+In this section, we present the quantitative results of our work. We trained the Set Transformer architecture to approximate the policy function, using the loss function defined
+in Equation 24. To compare the performance of the Set Transformer with an established
+baseline, we also trained the Deep Sets architecture, as used by Kahou et al. [2021].
+We conducted this comparison in two different scenarios. In the first scenario, we set
+ν equal to one and varied N (the number of firms), which provided a linear-quadratic
+(LQ) solution as a benchmark for evaluating the performance of these architectures. In
+the second scenario, we evaluated the performance of these architectures for a fixed N
+while varying ν. In this scenario, we did not have an LQ solution available, so the mean
+squared error (MSE) was used to evaluate and compare the performance of the models.
+Before illustrating the comparison in these two scenarios, we show their difference
+graphically in a specific case, where ν equals one and N = 128. This visualization provides insight into how each architecture approximates the policy function compared to
+the LQ benchmark solution. Figures 4 and 5 illustrate the policy trajectories obtained by
+the Deep Sets and Set Transformer architectures, respectively, for this setting. The Deep
+Sets approach shown here corresponds to the method proposed in Kahou et al. [2021].
+Figure 4 shows the trajectory of u( Xt ) predicted by the Deep Sets architecture alongside the corresponding LQ solution. A significant deviation is observed, highlighting the
+limited accuracy of Deep Sets in capturing the optimal policy. The error ratio further
+emphasizes this discrepancy, demonstrating a considerable gap between the learned and
+
+22
+
+true trajectories.
+
+Figure 4: Policy trajectory u( Xt ) computed by Deep Sets (blue) compared to the LQ solution (red) for ν = 1, N = 128. For these results, we focused on the case with α0 = 1.0,
+α1 = 1.0, β = 0.95, γ = 90.0, δ = 0.05, σ = 0.005 , and η = 0.001. Relative policy error is
+defined as
+
+|u−ure f |
+ure f .
+
+In contrast, Figure 5 presents the policy trajectory computed by the Set Transformer
+architecture alongside the LQ solution. Unlike Deep Sets, the Set Transformer produces
+a trajectory that closely matches the LQ benchmark, with only negligible deviations. The
+error ratio confirms this strong alignment, reinforcing the Set Transformer’s effectiveness
+in approximating optimal policies.
+
+Figure 5: Policy trajectory u( Xt ) computed by Set Transformer (blue) compared to the LQ
+solution (red) for ν = 1, N = 128. For these results, we focused on the case with α0 = 1.0,
+α1 = 1.0, β = 0.95, γ = 90.0, δ = 0.05, σ = 0.005 , and η = 0.001. Relative policy error is
+defined as
+
+|u−ure f |
+ure f .
+
+Figure 6 illustrates the loss trajectory of the Deep Sets model, which stabilizes around
+23
+
+10−3 . This relatively high final loss suggests that the model struggles to achieve finer
+approximations.
+
+Figure 6: Loss evolution during the training of the Deep Sets architecture. For these
+results, we focused on the case with α0 = 1.0, α1 = 1.0, β = 0.95, γ = 90.0, δ = 0.05,
+σ = 0.005, N = 128, ν = 1, and η = 0.001.
+Conversely, Figure 7 presents the loss trajectory of the Set Transformer model. Notably, the final loss reaches approximately 10−11 , significantly lower than that of Deep
+Sets. This sharp reduction highlights the Set Transformer’s superior optimization capability and its ability to achieve an exceptionally precise approximation of the policy
+function.
+With these qualitative insights into the accuracy and optimization behavior of both
+architectures, we now turn to the quantitative performance comparison across different
+problem settings.
+Table 1 presents a comparison of the Set Transformer and Deep Sets architectures in
+terms of policy error, runtime, and MSE across different values of N, with ν = 1, a setting
+that provides linear-quadratic (LQ) benchmark solutions for evaluation. Both architectures were trained with approximately the same number of parameters, ensuring a fair
+comparison. The results demonstrate that the Set Transformer significantly outperforms
+Deep Sets, achieving policy errors that are nearly 100 times lower than those of Deep Sets
+24
+
+Figure 7: Loss evolution during the training of the Set Transformer. For these results, we
+focused on the case with α0 = 1.0, α1 = 1.0, β = 0.95, γ = 90.0, δ = 0.05, σ = 0.005,
+N = 128, ν = 1, and η = 0.001.
+at various values of N. This substantial reduction in error highlights the effectiveness
+of the Set Transformer in accurately approximating the policy function. Moreover, this
+finding aligns with the results of Lee et al. [2019], who observed a similar performance
+advantage of the Set Transformer over Deep Sets in other domains. The consistency in
+relative performance across increasing values of N emphasizes the scalability and robustness of the Set Transformer in capturing complex dependencies within the data, especially
+in scenarios with LQ benchmark solutions.
+Table 2 presents the comparison of the Set Transformer and Deep Sets architectures for
+different values of ν in a scenario where we do not have a linear-quadratic (LQ) benchmark solution. Consequently, we evaluate and compare these architectures based on their
+mean squared error (MSE). Kahou et al. [2021] previously solved this model for lower
+values of ν (ranging from 1 to 1.5), but as we increase ν, the inverse demand function becomes more complex and nonlinear, which adds to the model’s complexity. This increase
+in complexity is evident in Table 2, as the performance of both architectures declines with
+higher values of ν, given a fixed number of parameters. Despite this, the Set Transformer
+maintains a significant advantage over Deep Sets, achieving substantially lower MSE val25
+
+Model
+
+N=
+
+103
+
+5 × 103
+
+104
+
+5 × 104
+
+105
+
+Deep Sets
+
+Policy Error (%)
+Runtime (s)
+MSE
+
+9.2
+250
+8.6e-3
+
+11.4
+257
+9.9e-3
+
+13.3
+248
+1.2e-2
+
+14.1
+269
+1.3e-2
+
+14.5
+261
+1.4e-2
+
+Set Transformer
+
+Policy Error (%)
+Runtime (s)
+MSE
+
+0.07
+278
+6.9e-5
+
+0.10
+283
+9.2e-5
+
+0.12
+290
+1.1e-4
+
+0.15
+284
+1.6e-4
+
+0.17
+288
+1.8e-4
+
+131
+
+114
+
+111
+
+94
+
+85
+
+Relative Performance
+
+Table 1: Performance comparison of the Set Transformer and Deep Sets architectures for
+different N values. The first rows for each model show the relative policy error, defined
+|u−u
+
+|
+
+as u re f , while the additional rows provide runtime and MSE values. The Relative
+re f
+Performance is calculated by dividing the Policy Error of the Set Transformer by the Policy
+Error of Deep Sets. For these results, we focused on the case with α0 = 1.0, α1 = 1.0,
+β = 0.95, γ = 90.0, ν = 1, δ = 0.05, σ = 0.005, and η = 0.001.
+ues across all tested values of ν. This robust performance highlights the Set Transformer’s
+capacity to handle more complex, nonlinear relationships within the model, even as the
+problem difficulty escalates.
+Model
+
+ν=
+
+Deep Sets
+Set Transformer
+Relative Performance
+
+3
+
+3.5
+
+4
+
+4.5
+
+5
+
+5.5
+
+Runtime (s)
+MSE
+
+356
+5.6e-2
+
+370
+7.8e-2
+
+377
+9.7e-2
+
+389
+1.2e-1
+
+391
+1.4e-1
+
+409
+1.5e-1
+
+Runtime (s)
+MSE
+
+342
+7.3e-4
+
+373
+8.4e-4
+
+365
+8.2e-4
+
+380
+8.1e-4
+
+405
+8.8e-4
+
+427
+9.7e-4
+
+77
+
+93
+
+118
+
+148
+
+160
+
+155
+
+Table 2: Performance comparison of the Set Transformer and Deep Sets architectures for
+different ν values. The first and second rows for each model provide runtime and MSE
+values. The Relative Performance is calculated by dividing the MSE of the Set Transformer by the MSE of Deep Sets. For these results, we focused on the case with α0 = 1.0,
+α1 = 1.0, β = 0.95, γ = 90.0, N = 128, δ = 0.05, σ = 0.005 , and η = 0.001.
+The role of ν in the model’s complexity is highlighted in Figure 8, which depicts the
+policy trajectory of firm 1 over time, u( x1t , Xt ), for ν = 1 (the LQ case) and ν = 3.5. This
+figure demonstrates that the solution is significantly influenced by the value of ν. As ν increases, the complexity of the inverse demand function grows, leading to a more intricate
+26
+
+Figure 8: Policy trajectory of firm 1 over time, u( x1t , Xt ), for ν = 1 (LQ case) and ν = 3.5.
+For these results, we focused on the case with α0 = 1.0, α1 = 1.0, β = 0.95, γ = 90.0,
+N = 128, δ = 0.05, σ = 0.005 , and η = 0.001.
+policy trajectory. Economically, higher values of ν correspond to environments with more
+product differentiation and less substitutability across firms’ outputs, which are relevant
+in models of monopolistic competition, firm-level pricing with demand heterogeneity, or
+differentiated product markets. Therefore, it becomes crucial to utilize a neural network
+that can maintain strong performance even as ν reaches larger values, corresponding to
+a quantitatively more complex model. The Set Transformer’s robust performance with
+higher ν values, as shown in Table 2, highlights its suitability for handling these more
+complex cases.
+It is also important to check the transversality condition when solving dynamic programming problems, as it ensures the long-term stability and feasibility of the solution.
+The transversality condition is not imposed explicitly but is implicitly satisfied through
+the training process. We have discussed it in Appendix C.
+
+27
+
+6
+
+Conclusion
+
+In this paper, we proposed a computational solution method for high-dimensional dynamic programming (HDDP) problems using the Set Transformer architecture. By leveraging the attention mechanisms and permutation invariance of the Set Transformer, we
+addressed the limitations of previously used architectures, such as Deep Sets, in capturing complex dependencies in heterogeneous agent models. Our work extends previous
+research by providing a thorough comparison of these architectures under varying economic scenarios, including both linear-quadratic (LQ) cases and more complex, nonlinear
+settings.
+We demonstrated that the Set Transformer significantly outperforms Deep Sets in
+terms of policy error and mean squared error (MSE), particularly as the model complexity
+increases. For ν = 1, where an LQ benchmark solution is available, the Set Transformer
+achieved errors nearly 100 times lower than Deep Sets, confirming its superior accuracy
+and efficiency. For larger values of ν, where the inverse demand function becomes more
+nonlinear and no LQ solution exists, the Set Transformer continued to exhibit strong performance, maintaining its advantage over Deep Sets even as both architectures experienced performance degradation.
+Additionally, we have argued that the deep learning’s tendency to the minimum norm
+solutions leads to satisfy the transversality condition without explicit enforcement. This
+property, as supported by prior studies such as Kahou et al. [2021, 2022], arises from the
+inherent regularization effects of stochastic gradient descent and the implicit bias of deep
+learning architectures toward smooth, stable solutions.
+This study highlights the potential of attention-based architectures like the Set Transformer in solving high-dimensional dynamic programming problems with complex economic interactions. Its ability to generalize across different economic environments and
+handle nonlinearities makes it a promising tool for future applications in computational
+economics. In particular, it enables the solution of richer models with detailed hetero28
+
+geneity and more realistic market structures, without requiring simplifications that are
+often necessary in traditional approaches. This expands the frontier of feasible quantitative analysis, especially in settings where agent-level interactions and high-dimensional
+state spaces play a central role.
+
+29
+
+References
+Juho Lee, Yoonho Lee, Jungtaek Kim, Adam Kosiorek, Seungjin Choi, and Yee Whye
+Teh. Set transformer: A framework for attention-based permutation-invariant neural
+networks. In International conference on machine learning, pages 3744–3753. PMLR, 2019.
+Manzil Zaheer, Satwik Kottur, Siamak Ravanbakhsh, Barnabas Poczos, Russ R Salakhutdinov, and Alexander J Smola. Deep sets. Advances in neural information processing
+systems, 30, 2017.
+Robert E Lucas Jr and Edward C Prescott. Investment under uncertainty. Econometrica:
+Journal of the Econometric Society, pages 659–681, 1971.
+Mahdi Ebrahimi Kahou, Jesús Fernández-Villaverde, Jesse Perla, and Arnav Sood. Exploiting symmetry in high-dimensional dynamic programming. Technical report, National Bureau of Economic Research, 2021.
+Lars Ljungqvist and Thomas J Sargent. Recursive macroeconomic theory. MIT press, 4 ed,
+2018.
+Per Krusell and Anthony A Smith, Jr. Income and wealth heterogeneity in the macroeconomy. Journal of political Economy, 106(5):867–896, 1998.
+Wouter J Den Haan. Comparison of solutions to the incomplete markets model with
+aggregate uncertainty. Journal of Economic Dynamics and Control, 34(1):4–27, 2010.
+Stephanie Schmitt-Grohé and Martın Uribe. Optimal fiscal and monetary policy under
+sticky prices. Journal of economic Theory, 114(2):198–230, 2004.
+Michael Reiter. Solving heterogeneous-agent models by projection and perturbation. Journal of Economic Dynamics and Control, 33(3):649–665, 2009.
+
+30
+
+Timo Boppart, Per Krusell, and Kurt Mitman. Exploiting mit shocks in heterogeneousagent economies: the impulse response as a numerical derivative. Journal of Economic
+Dynamics and Control, 89:68–92, 2018.
+Christian Bayer and Ralph Luetticke. Solving discrete time heterogeneous agent models
+with aggregate risk and many idiosyncratic states by perturbation. Quantitative Economics, 11(4):1253–1288, 2020.
+John Rust. Using randomization to break the curse of dimensionality. Econometrica: Journal of the Econometric Society, pages 487–516, 1997.
+Jiequn Han, Yucheng Yang, et al. Deepham: A global solution method for heterogeneous
+agent models with aggregate shocks. arXiv preprint arXiv:2112.14377, 2021.
+Lilia Maliar, Serguei Maliar, and Pablo Winant. Deep learning for solving dynamic economic models. Journal of Monetary Economics, 122:76–101, 2021.
+Marlon Azinovic, Luca Gaegauf, and Simon Scheidegger. Deep equilibrium nets. International Economic Review, 63(4):1471–1525, 2022.
+Dirk Krueger and Felix Kubler. Computing equilibrium in olg models with stochastic
+production. Journal of Economic Dynamics and Control, 28(7):1411–1436, 2004.
+Kenneth L Judd, Lilia Maliar, Serguei Maliar, and Inna Tsener. How to solve dynamic
+stochastic models computing expectations just once. Quantitative Economics, 8(3):851–
+893, 2017.
+Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. Neural machine translation by
+jointly learning to align and translate. arXiv preprint arXiv:1409.0473, 2014.
+Ashish Vaswani. Attention is all you need. arXiv preprint arXiv:1706.03762, 2017.
+
+31
+
+Ahmad Aghapour, Hamid Arian, and Luis Seco. Deep-time neural networks: An efficient
+approach for solving high-dimensional pdes. Applied Mathematics and Computation, 488:
+129117, 2025.
+Mahdi Ebrahimi Kahou, Jesús Fernández-Villaverde, Sebastián Gómez-Cardona, Jesse
+Perla, and Jan Rosa. Spooky boundaries at a distance: Exploring transversality and
+stability with deep learning. 2022.
+Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton. Layer normalization. arxiv. arXiv
+preprint arXiv:1607.06450, 10, 2016.
+
+32
+
+A
+
+Neural Networks: a Class of Function Approximator
+
+Neural networks are a class of machine learning models inspired by the structure and
+function of the human brain. They consist of interconnected layers of nodes, or "neurons,"
+that process input data and produce an output. Neural networks are particularly wellsuited for approximating complex functions, making them valuable tools in solving highdimensional dynamic programming (HDDP) problems.
+A typical neural network is composed of three types of layers: an input layer, one or
+more hidden layers, and an output layer. The input layer receives the initial data, the
+hidden layers transform the data by learning features, and the output layer generates the
+final prediction.
+The input layer consists of neurons that receive the raw data, with each neuron corresponding to a feature in the input data. If the input data has n features, the input layer
+will have n neurons. These neurons pass the data to the hidden layers, where the real
+computation occurs. Each neuron in a hidden layer is connected to every neuron in the
+(l )
+
+previous layer (either the input layer or the previous hidden layer). The output zi
+
+of a
+
+neuron i in the l-th hidden layer is computed as follows:
+
+(l )
+
+zi
+
+( l −1)
+
+In this expression, z j
+
+= σ (l )
+
+n ( l −1)
+
+( l ) ( l −1)
+
+∑ wij z j
+
+j =1
+
+!
+(l )
+
++ bi
+
+(25)
+
+(l )
+
+is the output of the j-th neuron in the previous layer, wij is
+
+the weight associated with the connection between neuron j in the previous layer and
+(l )
+
+neuron i in the current layer, bi
+
+is the bias term for neuron i in the current layer, n(l −1)
+
+is the number of neurons in the previous layer, and σ(l ) (·) is the activation function of
+the l-th hidden layer, which introduces non-linearity into the model. This process is repeated across all hidden layers, with each layer building upon the features learned by
+the previous one. The activation function σ is crucial because it allows the network to
+
+33
+
+learn and represent complex, non-linear relationships within the data. Common choices
+for σ include the Rectified Linear Unit (ReLU), sigmoid, and hyperbolic tangent (tanh)
+functions.
+The final hidden layer connects to the output layer, where each neuron represents a
+potential output of the model. The output ŷk of neuron k in the output layer is computed
+as:
+
+n( L)
+
+ŷk = σ
+
+!
+
+∑ wik
+
+i =1
+
+( L +1) ( L )
+( L +1)
+z i + bk
+
+(26)
+( L +1)
+
+Here, n( L) is the number of neurons in the last hidden layer, wik
+
+( L +1)
+
+and bk
+
+are the
+
+weights and bias for the connections from the last hidden layer to the output layer, and
+ŷk is the final prediction for output k.
+Figure 9 illustrates a simple neural network with an input layer, two hidden layers,
+and an output layer. Each neuron in the input layer connects to every neuron in the hidden layer, and each neuron in the hidden layer connects to every neuron in the output
+layer. Arrows represent the connections between neurons, with weights and biases indicated along the connections.
+
+Figure 9: A simple neural network with an input layer, two hidden layers, and an output
+layer.
+During the training process, the network adjusts the weights w and biases b to mini34
+
+mize a loss function L. The loss function measures the difference between the predicted
+outputs ŷ and the actual outputs y from the training data. For regression tasks, a common
+loss function is the Mean Squared Error (MSE), defined as:
+
+L(y, ŷ) =
+
+1 m
+(yi − ŷi )2
+m i∑
+=1
+
+(27)
+
+where y is the vector of true values, ŷ is the vector of predicted values, and m is the
+number of samples.
+To minimize the loss function, neural networks use a process called backpropagation.
+Backpropagation computes the gradient of the loss function with respect to each weight
+in the network using the chain rule of calculus. These gradients are then used to update
+the weights in a way that reduces the loss function, typically through an optimization
+algorithm such as stochastic gradient descent (SGD) or the Adam optimizer:
+
+
+
+
+
+(l )
+
+(l )
+
+wij , bi
+
+
+
+(l )
+
+← wij − η
+
+∂L
+
+(l )
+
+, bi − η
+(l )
+
+∂wij
+
+∂L 
+(l )
+
+(28)
+
+∂bi
+
+where η is the learning rate, a hyperparameter that controls the step size of the weight
+updates. This iterative process allows the neural network to learn from the data, improving its accuracy in making predictions over time.
+
+B
+
+Deep Sets Architecture
+
+The Deep Sets architecture, introduced by Zaheer et al. [2017], provides a foundational
+approach to handling permutation-invariant data by ensuring that the order of elements
+within a set does not affect the model’s output. This characteristic makes Deep Sets suitable for scenarios where the relationships among elements are symmetric, as in many
+economic and multi-agent models.
+The key idea of Deep Sets is to model a permutation-invariant function f : Rn → R
+35
+
+by decomposing it into two main components. Mathematically, this can be represented
+as
+
+
+f (X) = ρ pool ϕ( x1 ), ϕ( x2 ), . . . , ϕ( xn ) ,
+
+(29)
+
+where X = { x1 , x2 , . . . , xn } is the input set of elements, ϕ : R → Rd is a transformation
+function that maps each element xi individually to a higher-dimensional space, pool(.)
+represents a permutation-invariant aggregation function (often a summation or mean),
+and ρ : Rd → R is another function that processes the aggregated output to produce the
+final prediction.
+In this structure, the transformation ϕ captures information about each element independently, while the aggregation function (summation or mean) combines these individual representations in a way that is invariant to the order of the elements in the input set.
+Finally, ρ maps the aggregated result to the desired output.
+For example, in the case of summation, the model output remains the same regardless
+of the order of elements, as
+
+f ({ x1 , x2 , . . . , xn }) = ρ (ϕ( x1 ) + ϕ( x2 ) + · · · + ϕ( xn )) .
+
+(30)
+
+This decomposition is powerful but limited in capturing complex, higher-order interactions among elements of the set. Deep Sets can handle simple dependencies but struggle with more intricate relationships, where interactions between elements are essential.
+For example, Deep Sets fail to efficiently approximate the maximum function, which is a
+permutation-invariant function (Lee et al. [2019]) . This limitation is addressed in the Set
+Transformer architecture, which extends Deep Sets by incorporating self-attention mechanisms to capture more complex dependencies within the set.
+In practice, we typically use feed-forward neural networks to implement the functions
+ϕ and ρ in Deep Sets. These neural networks are flexible and capable of capturing complex relationships within the data. By training these networks to minimize the error of the
+
+36
+
+output relative to a target value, we can optimize ϕ and ρ to effectively learn representations of the input elements and produce accurate, permutation-invariant predictions. The
+parameters of these neural networks are adjusted through backpropagation, allowing the
+model to learn how each element in the set contributes to the aggregated result and final
+output.
+
+C
+
+On Implicit Satisfaction of the Transversality Condition
+
+A well-known requirement in solving dynamic programming problems is the transversality condition, which ensures the long-term stability and feasibility of the solution. In
+deep learning-based approaches, this condition is typically not imposed explicitly. Kahou
+et al. [2021] argue that deep neural networks tend to satisfy the transversality condition
+implicitly through the training process.
+Specifically, the use of stochastic gradient descent (SGD) introduces an implicit regularization effect. Through iterative updates on minibatches of data, SGD encourages
+convergence to solutions that generalize well and exhibit stable behavior over time. This
+effect is especially pronounced in over-parameterized networks, which tend to converge
+to minimum-norm solutions that avoid explosive trajectories.
+Kahou et al. [2021] observe that this behavior allows deep learning models to comply
+with the transversality condition without requiring explicit boundary constraints. They
+also find that the learned solutions often align with ergodic distributions, indicating stable long-term dynamics. Similarly, Kahou et al. [2022] demonstrate that deep learning
+approximations inherently satisfy long-run conditions, including the transversality condition, even in models with steady-state multiplicity. This arises from deep learning’s
+bias toward functions with small derivatives, which match the class of solutions typically
+expected in dynamic models. These findings suggest that deep learning methods are well
+suited for approximating transition dynamics in high-dimensional state spaces without
+
+37
+
+explicitly solving boundary conditions at infinity.
+
+38
+
+

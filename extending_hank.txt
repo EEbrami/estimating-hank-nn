@@ -1,0 +1,617 @@
+​Technical Implementation Report:​
+​Extending Neural Network Estimation​
+​Frameworks to Two-Asset​
+​Heterogeneous Agent New Keynesian​
+​Models​
+
+​1. Introduction and Theoretical Motivation​
+​The quantitative analysis of macroeconomic policy has undergone a paradigm shift with the​
+​ascendancy of Heterogeneous Agent New Keynesian (HANK) models. These frameworks have​
+​fundamentally altered the understanding of monetary transmission by highlighting the role of​
+​the marginal propensity to consume (MPC) and the distribution of wealth. However, a critical​
+​dissonance persists between the theoretical richness of these models and the computational​
+​feasibility of estimating them on aggregate time series data. The standard One-Asset HANK​
+​framework, while tractable, fails to simultaneously replicate the high aggregate​
+​wealth-to-income ratios and the high average MPCs observed in microeconomic data.​​1​ ​To​
+​reconcile these empirical realities, the literature has gravitated toward Two-Asset models that​
+​distinguish between liquid assets (cash, bonds) and illiquid assets (housing, equity), governed​
+​by transaction costs.​
+​This report delineates a comprehensive strategy to extend the neural network estimation​
+​framework developed by Kase, Melosi, and Rottner (KMR, 2025) to accommodate the​
+​structural complexities of a Two-Asset HANK environment. The KMR framework represents a​
+​methodological breakthrough by treating structural parameters as pseudo-state variables​
+​within a deep learning architecture, thereby allowing for a "solve once, estimate many times"​
+​approach that circumvents the computational bottlenecks of traditional nested-loop​
+​estimation methods.​​1​ ​The integration of the Two-Asset​​physics into this framework requires a​
+​rigorous synthesis of the estimation rigor of KMR, the portfolio choice mechanics of Kaplan,​
+​Moll, and Violante (2018), and the advanced deep learning techniques for high-dimensional​
+
+​functional approximations pioneered by Han et al. (2021) and Maliar et al. (2021).​
+​The primary objective of this implementation is to construct an estimator capable of​
+​identifying the structural frictions—specifically portfolio adjustment costs and idiosyncratic​
+​risk—that drive the "flight to liquidity" and capital premia during aggregate uncertainty​
+​shocks.​​1​ ​By leveraging the scalability of neural networks,​​this approach aims to overcome the​
+​"curse of dimensionality" inherent in tracking the joint distribution of liquid and illiquid wealth,​
+​providing a robust tool for analyzing the interaction between inequality, asset markets, and​
+​stabilization policy.​
+
+​2. The Computational Architecture: The KMR​
+​Framework​
+​The foundational "blueprint" for this extension is the methodology proposed by Kase, Melosi,​
+​and Rottner (2025), which fundamentally restructures the problem of estimating nonlinear​
+​dynamic models. In standard Bayesian estimation, such as the Random Walk​
+​Metropolis-Hastings (RWMH) algorithm, the structural model must be solved for equilibrium​
+​dynamics at every iteration of the parameter chain. For heterogeneous agent models, where​
+​solving for the equilibrium involves calculating the evolution of an infinite-dimensional​
+​distribution, this repeated solution is computationally prohibitive.​
+
+​2.1 The Pseudo-State Variable Mechanism​
+
+​The central innovation of the KMR approach is the expansion of the state space to include​
+​structural parameters. In a conventional recursive equilibrium, the policy function $\psi$ maps​
+​the economic state variables $\mathbb{S}_t$ to control variables $C_t$, conditional on a fixed​
+​vector of structural parameters $\Theta$:​
+
+​$$C_t = \psi(\mathbb{S}_t; \Theta)$$​
+​KMR reformulates this by treating the parameters $\Theta$ not as fixed constants during the​
+​solution phase, but as inputs to the approximating neural network, effectively creating a​
+​"global" solution across the parameter space.​​1​ ​The​​neural network $\psi_{NN}$ is trained to​
+​approximate the policy function:​
+
+​$$\psi_{NN}(\mathbb{S}_t, \Theta | \mathbf{W}) \approx \psi(\mathbb{S}_t)$$​
+​where $\mathbf{W}$ represents the optimized weights and biases of the network. This​
+​reformulation implies that the computationally intensive "solution step"—training the neural​
+​network to satisfy the model's equilibrium conditions—occurs only once. During the​
+​estimation phase, evaluating the likelihood of a new parameter candidate $\Theta_{new}$​
+​drawn from the prior requires only a forward pass through the pre-trained network, which is a​
+​computationally trivial matrix-vector multiplication operation.​
+​This mechanism is particularly advantageous for HANK models because it decouples the​
+​complexity of the model solution from the sample size of the estimation chain. However,​
+​applying this to a Two-Asset model requires a precise definition of the augmented input​
+​vector. The neural network must learn the manifold of solutions not just over the domain of​
+​aggregate shocks (e.g., TFP or monetary policy shocks), but also over the domain of​
+​structural frictions, such as the portfolio adjustment cost parameter $\chi$ and the elasticity​
+​of substitution between assets.​
+
+​2.2 Architecture of the Neural Network Particle Filter​
+
+​Beyond solving the equilibrium policy functions, the KMR framework introduces a second​
+​neural network designed specifically to approximate the likelihood function itself.​​1​ ​The​
+​likelihood of a nonlinear DSGE model is typically estimated using a particle filter, a Monte​
+​Carlo method that is itself noisy and computationally expensive. KMR proposes training a​
+​"Neural Network Particle Filter" (NNPF) that maps the structural parameters directly to the​
+​likelihood value.​
+​The construction of the NNPF involves a three-stage process that must be adapted for the​
+​Two-Asset environment:​
+​1.​ ​Training Data Generation:​​A training set is constructed​​by drawing $N$ parameter​
+​vectors $\{\Theta_i\}_{i=1}^N$ from the prior distributions. For each $\Theta_i$, the model​
+​is simulated using the pre-trained policy network $\psi_{NN}$, and the likelihood​
+​$\mathcal{L}(\Theta_i | Y_{data})$ is estimated using a standard particle filter.​
+​2.​ ​Likelihood Function Approximation:​​A second neural​​network is trained to regress the​
+​estimated likelihoods on the parameter vectors. This network acts as a global smoother,​
+​filtering out the Monte Carlo noise inherent in the particle filter evaluations.​
+​3.​ ​Posterior Sampling:​​The actual Bayesian estimation​​is performed by sampling from the​
+​posterior using the likelihoods predicted by the NNPF.​
+​This architecture is robust to the "ZLB instability" often encountered in HANK estimations.​​1​
+​Acharya et al. (2023) note that particle filters often degenerate when the economy hits the​
+​Zero Lower Bound (ZLB) for extended periods, as the likelihood surface becomes flat or​
+
+​discontinuous. The NNPF smooths over these discontinuities, providing a stable gradient for​
+​the estimator. For the Two-Asset model, this stability is crucial, as the "flight to liquidity"​
+​during uncertainty shocks frequently pushes the natural rate of interest into negative territory,​
+​increasing the frequency of ZLB episodes.​​1​
+
+​3. The Physics of the Two-Asset HANK Model​
+​The transition from a One-Asset to a Two-Asset framework is not merely an addition of a​
+​variable; it fundamentally alters the household's optimization problem and the transmission​
+​mechanism of aggregate shocks. The One-Asset model conflates the​
+​consumption-smoothing motive with the wealth-accumulation motive, leading to​
+​counterfactual implications for the MPC.​​1​ ​The Two-Asset​​model separates these motives by​
+​introducing a liquid asset $b_t$ (government bonds) and an illiquid asset $a_t$ (capital or​
+​equity).​
+
+​3.1 The Household Budget Constraint and Transaction Costs​
+
+​Following the formulation in Kaplan, Moll, and Violante (2018), the household faces a flow​
+​budget constraint that accounts for the costs of rebalancing the portfolio. The crucial friction​
+​is the transaction cost $\chi(d_t, a_t)$ associated with depositing or withdrawing funds from​
+​the illiquid account.​​1​ ​The budget constraint is defined​​as:​
+
+​$$c_t + b_{t+1} + q_t a_{t+1} = R_t^b b_t + (q_t + r_t^a) a_t + w_t e_t z_t - T_t - \chi(d_t, a_t)$$​
+​Here, $b_t$ represents real liquid assets earning a real return $R_t^b / \pi_t$, and $a_t$​
+​represents illiquid assets with a price $q_t$ and a dividend (or rental rate) $r_t^a$. The​
+​variable $d_t$ denotes the flow of deposits into the illiquid account, defined as:​
+
+​$$d_t = q_t a_{t+1} - (q_t + r_t^a) a_t$$​
+​The transaction cost function $\chi(d_t, a_t)$ is typically modeled as a convex function that​
+​exhibits an "inaction region" around $d_t = 0$. A common specification is:​
+
+​$$\chi(d_t, a_t) = \chi_0 |d_t| + \chi_1 \left( \frac{d_t}{a_t} \right)^2 a_t$$​
+​This function includes a linear component $\chi_0$, which generates a fixed cost of​
+
+​adjustment (leading to inaction), and a quadratic component $\chi_1$, which penalizes large​
+​rapid adjustments. This structure is essential for generating the "wealthy hand-to-mouth"​
+​households—agents who hold substantial illiquid wealth but little liquid wealth and therefore​
+​have high MPCs out of small transitory income shocks.​​1​
+
+​3.2 Derivation of the Portfolio Euler Equation​
+
+​The introduction of the illiquid asset creates a complex arbitrage condition that the neural​
+​network must learn to satisfy. In the One-Asset model, the neural network minimizes the​
+​residual of a single consumption Euler equation. In the Two-Asset model, the household​
+​optimization yields two distinct first-order conditions: one for the liquid asset and one for the​
+​illiquid asset.​
+​The Euler equation for the liquid bond remains standard, governed by the borrowing​
+​constraint $b_{t+1} \ge \underline{b}$:​
+
+​$$u'(c_t) \ge \beta \mathbb{E}_t \left$$​
+​The inequality holds strictly when the borrowing constraint binds.​
+​The Euler equation for the illiquid asset is more complex due to the transaction cost. It​
+​represents the arbitrage condition equating the marginal cost of saving in illiquid assets today​
+​with the expected marginal benefit tomorrow. Differentiating the value function with respect​
+​to $a_{t+1}$, we derive the Portfolio Euler Equation (adapted from Appendix B.2 of​​1​)​ :​
+​$$ q_t \left( 1 + \frac{\partial \chi(d_t, a_t)}{\partial d_t} \right) u'(c_t) = \beta \mathbb{E}​t \left[​
+​u'(c​{t+1}) \left( q_{t+1} + r_{t+1}^a + \frac{\partial​​\chi_{t+1}}{\partial a_{t+1}} - \frac{\partial​
+​\chi_{t+1}}{\partial d_{t+1}} (q_{t+1} + r_{t+1}^a) \right) \right] $$​
+​This equation encapsulates the core physics of the model. The term $\left( 1 + \frac{\partial​
+​\chi}{\partial d_t} \right)$ represents the effective price of purchasing a unit of capital,​
+​inclusive of the marginal transaction cost. The right-hand side captures the future payoff,​
+​which includes the market return $(q_{t+1} + r_{t+1}^a)$ and the marginal reduction in future​
+​transaction costs achieved by having a higher stock of illiquid assets (the term $\frac{\partial​
+​\chi}{\partial a}$).​
+​The neural network policy function $\psi_{NN}$ must output consumption $c_t$ and portfolio​
+​deposit $d_t$ such that the residuals of both Euler equations are minimized. However, the​
+​presence of the linear cost component $\chi_0 |d_t|$ introduces a non-differentiability (a​
+​kink) at $d_t = 0$, where the derivative $\frac{\partial \chi}{\partial d_t}$ is undefined.​
+​Standard backpropagation algorithms used to train neural networks rely on smooth gradients​
+
+​and will fail to converge in the presence of such kinks. This necessitates the use of smoothing​
+​techniques, specifically the Fischer-Burmeister transformation.​
+
+​4. Handling Non-Convexities: The Math of Kinks​
+​The "inaction region" generated by the transaction cost is a defining feature of the Two-Asset​
+​model, creating a mass of households who do not adjust their capital holdings in response to​
+​small shocks. This discrete choice (adjust vs. do not adjust) renders the optimization problem​
+​non-convex. While traditional solution methods like value function iteration on a grid can​
+​handle discrete choices via comparison operators (max), deep learning methods require​
+​differentiable objective functions. To address this, we employ the methodology outlined by​
+​Maliar, Maliar, and Winant (2021), using Fischer-Burmeister functions to smooth the​
+​Karush-Kuhn-Tucker (KKT) conditions.​​1​
+
+​4.1 The Fischer-Burmeister Transformation​
+
+​The Fischer-Burmeister (FB) function is a powerful tool for converting complementarity​
+​problems into systems of smooth nonlinear equations. A complementarity problem is defined​
+​by conditions of the form:​
+
+​$$x \ge 0, \quad y \ge 0, \quad x \cdot y = 0$$​
+​The FB function $\Phi(x, y)$ serves as a smooth equivalent to these conditions:​
+
+​$$\Phi(x, y) = x + y - \sqrt{x^2 + y^2} = 0$$​
+​This function is zero if and only if $x$ and $y$ satisfy the complementarity conditions. It is​
+​differentiable everywhere except at the origin $(0,0)$, and even there, it has well-defined​
+​directional derivatives that allow gradient-based optimizers to proceed.​
+
+​4.2 Smoothing the Borrowing Constraint​
+
+​The borrowing constraint $b_{t+1} \ge \underline{b}$ creates a kink in the liquid asset policy​
+
+​function. Let $\lambda_t$ be the Lagrange multiplier on the borrowing constraint. The KKT​
+​conditions imply:​
+
+​$$\lambda_t \ge 0, \quad b_{t+1} - \underline{b} \ge 0, \quad \lambda_t (b_{t+1} -​
+​\underline{b}) = 0$$​
+​We can define the Euler residual for the unconstrained case as $h_t = u'(c_t) - \beta​
+​\mathbb{E}_t$. In a constrained optimum, $h_t = \lambda_t$. Thus, we can rewrite the​
+​constrained Euler equation using the FB function:​
+​$$ \mathcal{L}​{borrow} = \Phi(h_t, b​{t+1} - \underline{b})​​= h_t + (b_{t+1} - \underline{b}) -​
+​\sqrt{h_t^2 + (b_{t+1} - \underline{b})^2} = 0 $$​
+​Minimizing the squared error of $\mathcal{L}_{borrow}$ allows the neural network to learn the​
+​policy function for both constrained and unconstrained agents within a single smooth loss​
+​landscape.​​1​
+
+​4.3 Smoothing the Portfolio Adjustment Kink​
+
+​The portfolio adjustment decision presents a more complex "double kink." The household​
+​adjusts capital only if the marginal gain from adjusting exceeds the marginal cost. Let $\mu_t$​
+​be the shadow value of adjusting the portfolio. The optimality conditions imply an inaction​
+​band: if the shadow value is within $[-\chi^-, +\chi^+]$, then $d_t = 0$.​
+​To enable neural network training, we smooth the transaction cost function $\chi(d, a)$ itself.​
+​Instead of the non-differentiable absolute value function $|d|$, we can employ a smooth​
+​approximation such as the pseudo-Huber loss function or a hyperbola approximation:​
+
+​$$|d| \approx \sqrt{d^2 + \epsilon^2} - \epsilon$$​
+​where $\epsilon$ is a small smoothing parameter. This ensures that the marginal cost​
+​$\frac{\partial \chi}{\partial d}$ is continuous and differentiable at $d=0$, allowing gradients​
+​to flow through the inaction point. Alternatively, one can apply the FB function to the upper​
+​and lower bounds of the inaction inequalities, effectively replacing the discrete regime​
+​switching logic with a continuous "degree of bindingness." This approach is essential for the​
+​KMR optimizer to navigate the parameter space without getting stuck in local minima caused​
+​by discontinuous gradients.​
+
+​5. State Space Expansion and High Dimensionality​
+​Extending the KMR framework to the Two-Asset model precipitates a dramatic expansion of​
+​the state space. The distribution of households is no longer defined over a 2D domain $(b, e)$​
+​but a 3D domain $(b, a, e)$, leading to the "curse of dimensionality."​
+
+​5.1 The Neural Network Input Vector​
+
+​To capture the aggregate state of the economy, the neural network input vector must be​
+​augmented. In the baseline KMR implementation, the aggregate state is often approximated​
+​by tracking the histories of a finite set of simulated agents or by using a set of moments. The​
+​Two-Asset extension requires the following specific additions to the input vector​
+​$\mathbb{S}_t$:​
+​1.​ ​Idiosyncratic States:​​The input layer must accept​​the triplet $(b_{it}, a_{it}, e_{it})$ for​
+​the set of simulated agents. The inclusion of $a_{it}$ (illiquid assets) is non-negotiable,​
+​as the distribution of illiquid wealth is the primary driver of the investment response to​
+​shocks.​
+​2.​ ​Aggregate States:​​Beyond the standard productivity​​($Z_t$) and monetary ($R_t$)​
+​states, the input must include the aggregate capital stock $K_t = \int a_{it} \, d\mu_t$.​
+​Furthermore, if adjustment costs depend on aggregate investment (as in models with​
+​capital adjustment costs), the lagged aggregate investment $I_{t-1}$ must also be​
+​included.​
+​3.​ ​Structural Parameters (Pseudo-States):​​To enable the​​estimation of the Two-Asset​
+​specific frictions, the parameter vector $\Theta$ included in the input must be expanded​
+​to include:​
+​○​ ​$\chi_0, \chi_1$: The scaling parameters of the portfolio adjustment cost.​
+​○​ ​$\sigma_{\chi}$: If adjustment costs are stochastic, their volatility.​
+​○​ ​$\xi$: The elasticity of substitution between assets (if applicable).​
+
+​5.2 The "Deep Learning Proof": Single Network Architecture​
+
+​A critical theoretical question is whether a single neural network can effectively approximate​
+​the policy functions for such a high-dimensional system, or if separate networks are required​
+​for each asset decision. The research by Han et al. (2021) on the "DeepHAM" framework​
+
+​provides the theoretical justification for using a single, unified network architecture.​​1​
+​Han et al. demonstrate that deep neural networks possess an inherent capability for​
+​"automatic model reduction." When trained on high-dimensional inputs representing a​
+​distribution (e.g., a sample of thousands of agents), the hidden layers of the network learn to​
+​extract the relevant low-dimensional features (or "generalized moments") that drive the​
+​aggregate dynamics. This effectively replicates the logic of the Krusell-Smith​
+​algorithm—where the infinite distribution is approximated by a few moments—but does so​
+​endogenously and non-linearly.​
+​This implies that we do not need to manually engineer a set of moments (e.g., mean liquid​
+​wealth, share of hand-to-mouth households) to feed into the network. Instead, we can feed a​
+​random sample of agent states $(b_i, a_i, e_i)$ into a permutation-invariant layer (such as a​
+​"Set Transformer" or a simple mean-pooling layer) at the beginning of the network. The​
+​network will learn the sufficient statistics of the distribution required to forecast prices $q_t$​
+​and $w_t$. This "Deep Learning Proof" confirms that a single policy network​
+​$\pi(\mathbb{S}_t, \Theta)$ outputting the vector $(c_t, b_{t+1}, a_{t+1})$ is not only feasible​
+​but likely more stable than training disjoint networks for each decision margin.​
+
+​5.3 The "All-in-One" Expectation Operator​
+
+​A major computational cost in training these networks is the evaluation of expectations​
+​integrals, $\mathbb{E}_t [\cdot]$, which appear in the Euler equations. Standard quadrature​
+​methods suffer exponentially from the curse of dimensionality as the number of shocks​
+​increases. Maliar, Maliar, and Winant (2021) introduce the "All-in-One" (AiO) expectation​
+​operator to address this.​​1​
+​The AiO method merges the optimization step with the integration step. Instead of evaluating​
+​the expectation integral accurately at every training step (which would require thousands of​
+​draws), the AiO method uses two independent random draws of the future shocks​
+​$\epsilon_{t+1}$ and $\epsilon'_{t+1}$ to construct an unbiased estimator of the squared​
+​residual.​
+​Specifically, for an Euler residual function $\mathcal{R}(s, \epsilon)$, instead of minimizing​
+​$(\mathbb{E})^2$, the AiO approach minimizes $\mathcal{R}(s, \epsilon) \cdot \mathcal{R}(s,​
+​\epsilon')$. This reduces the cost of integration from $N_{quadrature}$ to just 2 evaluations​
+​per training step. Over the course of thousands of training iterations (epochs), the stochastic​
+​gradient descent algorithm averages out the noise, converging to the true expectation.​
+​Implementing the AiO operator in the KMR extension is critical for maintaining computational​
+
+​feasibility when adding the extra dimensions of the Two-Asset model.​
+
+​6. Bayesian Identification Strategy and Priors​
+​The ultimate goal of extending the KMR framework is to estimate the model on US data. This​
+​requires a rigorous identification strategy. The Two-Asset model introduces new parameters​
+​that are often weakly identified by standard aggregate time series (GDP, inflation). To ensure​
+​robust estimation, we must utilize specific priors derived from the HANK literature and target​
+​specific moments that identify the portfolio friction.​
+
+​6.1 Parameter Priors and Sources​
+​Drawing from the empirical work of Bayer, Born, and Luetticke (2024)​​1​ ​and the theoretical​
+​foundations of Kaplan et al. (2018)​​1​​, we establish​​the following prior distributions for the​
+​structural parameters. These priors are chosen to cover the plausible range of frictions while​
+​enforcing theoretical constraints (e.g., positivity).​
+
+​Param​
+​eter​
+​Catego​
+​ry​
+
+​Param​
+​eter​
+
+​Symbol​
+
+​Descri​
+​ption​
+
+​Prior​
+​Distrib​
+​ution​
+
+​Mean​
+
+​Std​
+​Dev​
+
+​Source​
+
+​Frictio​
+​ns​
+
+​Adjust​
+​ment​
+​Cost​
+
+​$\chi_1​
+​$​
+
+​Scales​
+​the​
+​quadrat​
+​ic cost​
+​of​
+​rebalan​
+​cing.​
+​Identifi​
+​es the​
+​illiquidit​
+​y​
+​premiu​
+
+​Gamma​
+
+​5.00​
+
+​2.00​
+
+​Bayer​​2​
+
+​m.​
+​Risks​
+
+​Prefere​
+​nces​
+
+​Policy​
+
+​Idiosyn​
+​cratic​
+​Volatilit​
+​y​
+
+​$\sigma​
+​_s$​
+
+​Volatilit​
+​y of​
+​income​
+​shocks.​
+​Drives​
+​precaut​
+​ionary​
+​savings.​
+
+​Inverse​
+​Gamma​
+
+​0.10​
+
+​2.00​
+
+​Bayer​​2​
+
+​Uncerta​
+​inty​
+​Persiste​
+​nce​
+
+​$\rho_{\​
+​sigma}$​
+
+​Persiste​
+​nce of​
+​uncerta​
+​inty​
+​shocks.​
+
+​Beta​
+
+​0.50​
+
+​0.20​
+
+​Luettick​
+​e​​1​
+
+​Discoun​
+​t Factor​
+
+​$\beta$​
+
+​Sets​
+​the​
+​steady-​
+​state​
+​liquid​
+​rate.​
+
+​Beta​
+
+​0.986​
+
+​0.005​
+
+​Kaplan​​1​
+
+​Risk​
+​Aversio​
+​n​
+
+​$\gam​
+​ma$​
+
+​Inverse​
+​interte​
+​mporal​
+​elasticit​
+​y of​
+​substitu​
+​tion.​
+
+​Normal​
+
+​1.00​
+
+​0.25​
+
+​Standar​
+​d​
+
+​Taylor​
+​Rule​
+​Inflation​
+
+​$\phi_\​
+​pi$​
+
+​Central​
+​bank​
+​respons​
+​e to​
+​inflation​
+​.​
+
+​Normal​
+
+​1.50​
+
+​0.25​
+
+​Smets-​
+​Wouter​
+​s​
+
+​6.2 Identification Strategy: The "Investment Wedge"​
+
+​A key insight from Luetticke (2025) is that aggregate uncertainty shocks in a Two-Asset model​
+​generate a "flight to safety" that is distinct from standard precautionary savings.​​1​ ​When​
+​uncertainty regarding Total Factor Productivity (TFP) rises, households not only consume less​
+​(standard Euler effect) but also actively rebalance their portfolios away from the risky illiquid​
+​asset toward the safe liquid asset. This generates an "investment wedge"—a divergence​
+​between the return on capital and the risk-free rate that cannot be explained by standard​
+​adjustment costs alone.​
+​To capture this mechanism, the estimation strategy must include parameters governing the​
+​volatility of volatility​​(stochastic volatility of​​TFP). The KMR neural network is uniquely suited​
+​to identify this nonlinear mechanism because it solves the global nonlinear solution.​
+​Linearized estimators (like standard Kalman filters) typically treat uncertainty shocks as level​
+​shocks to the discount factor, missing the second-order portfolio rebalancing effects. By​
+​treating the volatility state $\sigma_{Z,t}$ as an explicit input to the neural network, the​
+​estimator can capture the state-dependent sensitivity of investment to uncertainty, providing​
+​a powerful source of identification for the adjustment cost parameter $\chi_1$.​
+
+​7. Feasibility, Stability, and Robustness​
+​The implementation of this advanced estimator faces several stability challenges​
+​well-documented in the literature. Addressing these​​ex-ante​​is essential for the convergence​
+​of the KMR optimization loop.​
+
+​7.1 The ZLB Instability and Shadow Rates​
+
+​Acharya et al. (2023) emphasize that estimating HANK models on real data is fraught with​
+​instability due to the Zero Lower Bound.​​1​ ​In a Two-Asset​​model, the "flight to safety" puts​
+​immense downward pressure on the natural rate of interest. If the model gets stuck at the ZLB​
+​for long simulation periods, the gradients used to update the neural network weights may​
+​vanish or explode, leading to a "degenerate" solution where the estimator fails to learn the​
+​dynamics.​
+​To mitigate this, the loss function in the KMR code should incorporate a​​Shadow Rate​
+
+​penalty​​or use a smooth approximation of the ZLB kink. Instead of modeling the nominal rate​
+​as $R_t = \max(1, R_t^*)$, we employ a Softplus function:​
+
+​$$R_t = 1 + \frac{1}{\kappa} \log(1 + e^{\kappa (R_t^* - 1)})$$​
+​This function approaches the max operator as $\kappa \to \infty$ but remains strictly​
+​differentiable everywhere. This ensures that non-zero gradients propagate back through the​
+​network even when the economy is deep in a liquidity trap, allowing the optimizer to navigate​
+​out of the ZLB region during training.​
+
+​7.2 The "Volatility Paradox"​
+
+​Reiter (2019) identifies a "Volatility Paradox" in linearized heterogeneous agent models:​
+​linearization kills the precautionary savings channel because volatility is inherently a​
+​second-moment phenomenon.​​1​ ​A linear approximation​​around a deterministic steady state​
+​sets variance terms to zero.​
+​The KMR framework, being a​​global nonlinear solution​,​​is immune to this paradox in theory.​
+​However, feasibility depends on the network capacity. The neural network must be sufficiently​
+​wide (e.g., 256+ neurons per layer) to capture the curvature of the policy function with​
+​respect to the volatility state. A "thin" network will essentially perform a linear regression,​
+​reproducing the volatility paradox. Therefore, the architecture must be over-parameterized​
+​relative to standard solution networks to capture these higher-order moments.​
+
+​7.3 The "Missing Middle" and Distributional Constraints​
+
+​Kaplan and Violante (2022) warn of the "Missing Middle" problem in One-Asset models, where​
+​the wealth distribution becomes polarized into rich and poor with no middle class.​​1​ ​Two-Asset​
+​models can solve this, but only if the return gap between liquid and illiquid assets is calibrated​
+​precisely. If the estimated adjustment cost $\chi_1$ drifts too low, the two assets become​
+​perfect substitutes, and the model collapses back to the One-Asset logic, resurrecting the​
+​"Missing Middle" and degrading the fit to aggregate consumption data.​
+​To prevent this regime collapse during estimation, the loss function should include a​
+​regularization term that penalizes deviations from key distributional moments. Specifically,​
+​adding a penalty for the​​Liquid Wealth Share​​(targeting​​approx. 5% of total wealth,​
+​consistent with US data) ensures that the estimator respects the segmentation of the asset​
+
+​markets. This acts as a "soft restriction" that guides the neural network toward the​
+​economically relevant region of the parameter space where the Two-Asset frictions are active.​
+
+​8. Implementation Roadmap​
+​The execution of this research project follows a structured roadmap designed to​
+​incrementally build complexity and verify stability at each stage.​
+​Phase 1: Data Preparation and Moment Matching​
+​●​ ​Aggregate US time series for Real GDP, Inflation (PCE), and the Federal Funds Rate are​
+​compiled.​
+​●​ ​Crucially, distributional moments are computed from the Survey of Consumer Finances​
+​(SCF) to serve as validation targets: the Gini coefficients for liquid and illiquid wealth, and​
+​the share of hand-to-mouth households.​
+​Phase 2: Network Architecture Expansion​
+​●​ ​The NKModel class in the KMR codebase is modified. The input dimension is increased to​
+​accept the distribution of agents $(b, a, e)$ and the vector of new parameters​
+​$\Theta_{new}$.​
+​●​ ​The "Set Transformer" layer is implemented to process the agent distribution in a​
+​permutation-invariant manner, as per the DeepHAM proof.​
+​Phase 3: Loss Function Engineering​
+​●​ ​The residuals_portfolio() function is implemented, encoding the Portfolio Euler Equation​
+​derived in Section 3.2.​
+​●​ ​The Fischer-Burmeister transformation is applied to the borrowing constraint and the​
+​transaction cost thresholds to ensure differentiability.​
+​●​ ​The Softplus ZLB approximation is integrated into the Taylor Rule specification.​
+​Phase 4: Pre-Training and Initialization​
+​●​ ​The network is pre-trained on the deterministic steady state to initialize weights. This​
+​"curriculum learning" approach prevents the network from diverging when exposed to​
+​aggregate shocks immediately.​
+​Phase 5: The KMR Training Loop​
+​●​ ​The network is trained over the hypercube of priors defined in Section 6. The "All-in-One"​
+​expectation operator is used to efficiently handle the integration of future uncertainty​
+​shocks.​
+
+​Phase 6: Estimation and Posterior Analysis​
+​●​ ​The Neural Network Particle Filter is trained to map parameters to likelihoods.​
+​●​ ​The estimation is run on US data to recover the posterior distributions of the adjustment​
+​cost $\chi_1$ and the idiosyncratic risk $\sigma_s$.​
+​●​ ​Counterfactual simulations are run to quantify the contribution of the "investment​
+​wedge" to the 2008 and 2020 recessions.​
+​This comprehensive implementation plan transforms the KMR framework from a theoretical​
+​proof-of-concept into a production-grade econometric tool. By rigorously addressing the​
+​computational challenges of high dimensionality and non-convexity, it unlocks the ability to​
+​estimate the deep structural parameters that govern the complex interplay between financial​
+​markets, inequality, and the macroeconomy.​
+
+​Works cited​
+​1.​ ​Kase_Estimating-Nonlinear-Heterogeneous-Agent-Models-with-Neural-Network​
+
+​s_2025.pdf​
+​2.​ ​Bayer_Shocks-Frictions-and-Inequality-in-US-Business-Cycles_2024.pdf,​
+​https://drive.google.com/open?id=1CjAMy61-RopHIRZVKMaBXcBC7foM26EX​
+
+

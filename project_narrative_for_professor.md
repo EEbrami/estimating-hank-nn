@@ -32,6 +32,9 @@ For my final project, I replaced the MLP backbone with a **Set Transformer**, fo
 - **The Solution:** I implemented the **Induced Set Attention Block (ISAB)** from **Lee et al. (2019)**. This architecture allows the network to "attend" to clusters of agents (e.g., the borrowing constrained) regardless of their order in the input vector.
 - **Quote:** Tabibpour (2025) confirms:
   > "The Set Transformer demonstrated strong performance... making it particularly well-suited for complex economic models where the relationships between agents... involve intricate dependencies."
+- **The Efficiency Gain (Sample Efficiency):**
+  - **MLP (Brute Force):** An MLP is a universal approximator, so with _infinite data_, it could eventually learn to be permutation invariant. However, for a finite training budget (e.g., 2.5 hours), it wastes capacity "learning" that swapping Agent A and Agent B doesn't matter.
+  - **Set Transformer (Built-in Physics):** By enforcing permutation invariance in the architecture (Zaheer et al., 2017), the model starts with the correct "physics" of sets. It spends its training time learning economics, not symmetry. This results in faster convergence and better generalization.
 
 ## 4. The Implementation
 
@@ -39,7 +42,7 @@ I built a custom codebase from scratch (using PyTorch) that integrates:
 
 1.  **The KMR Estimator:** For the "All-in-One" training loop (citing _Maliar et al., 2021_).
 2.  **The Set Transformer:** For the "Brain" of the agent.
-3.  **A "Proxy HANK" Environment:** A simplified physics engine (citing _Kaplan et al., 2018_) to benchmark the architecture's performance.
+3.  **A "Proxy HANK" Environment:** A simplified physics engine where the distribution evolves according to an aggregate-state-dependent transition matrix (Reiter-style proxy). This ensures the Set Transformer learns the mapping from _evolving_ inequality to aggregate prices, rather than just a static embedding.
 
 ## 5. Conclusion
 

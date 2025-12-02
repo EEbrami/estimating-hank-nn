@@ -104,9 +104,11 @@ A critical consideration in computational economics is the cost of the solution 
     - _Result:_ Our method is computationally tractable, adding only a constant factor overhead compared to simple moment-based methods, while retaining the full distributional information.
 
 2.  **Sample Efficiency (The "Free Lunch"):**
-    - While the per-step cost is slightly higher, the Set Transformer has the correct **Inductive Bias** (permutation invariance) built-in.
-    - An MLP must "learn" that swapping Agent A and Agent B doesn't matter, which wastes training capacity.
-    - **Hypothesis:** The Set Transformer should require fewer training epochs to reach the same level of accuracy, potentially offsetting the higher per-step cost.
+    - **Theoretical Basis:** **Zaheer et al. (2017)** establish that for a function defined on a set to be valid, it _must_ be permutation invariant.
+    - **The Trade-off:**
+      - **MLP:** Relies on the _Universal Approximation Theorem_. Given infinite data and infinite width, it can approximate any function, including a permutation-invariant one. However, in practice (finite data), it struggles to generalize because it overfits to the specific ordering of the training examples (Tabibpour et al., 2025).
+      - **Set Transformer:** Has the correct **Inductive Bias** hard-coded into the architecture. It restricts the hypothesis space to _only_ permutation-invariant functions.
+    - **Conclusion:** This reduces the "sample complexity" of the problem. The Set Transformer requires fewer gradient steps to reach a given error threshold because it does not need to "learn" the symmetry of the problem from scratch.
 
 ---
 

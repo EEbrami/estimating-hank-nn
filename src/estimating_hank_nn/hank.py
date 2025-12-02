@@ -241,11 +241,25 @@ class HANKModel(object):
         # zeta_next = rho * zeta + sigma_a * epsilon
         zeta_next = par.rho_a * state.zeta + e.zeta * par.sigma_a
         
-        # Update distribution
-        # In a full model, we would simulate agents: b' = g(b, e, zeta, ...)
-        # For now, we assume a stationary distribution or simple evolution
-        # Placeholder: keep distribution constant (or add small noise to simulate churn)
-        dist_next = state.distribution # + 0.01 * torch.randn_like(state.distribution)
+        # Update distribution (Reiter Proxy / Proxy HANK)
+        # The distribution evolves based on:
+        # 1. Persistence (rho_dist)
+        # 2. Aggregate Shock (zeta): "A rising tide lifts all boats"
+        # 3. Idiosyncratic Shocks: Individual churn
+        
+        rho_dist = 0.95
+        
+        # Aggregate impact: zeta affects the first dimension (proxy for assets/income)
+        # zeta: (batch, 1) -> (batch, num_agents, 1)
+        agg_impact = state.zeta.unsqueeze(1).expand(-1, state.distribution.shape[1], 1)
+        
+        # Idiosyncratic shock
+        idio_shock = 0.05 * torch.randn_like(state.distribution)
+        
+        # Update: dist' = rho * dist + alpha * agg_shock + idio_shock
+        # We only apply agg_impact to the first feature for simplicity, or all.
+        # Let's apply to all for a general "wealth effect"
+        dist_next = rho_dist * state.distribution + 0.1 * agg_impact + idio_shock
 
         return State({"zeta": zeta_next, "distribution": dist_next})
 

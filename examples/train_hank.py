@@ -51,14 +51,14 @@ def train():
         print("Error: Pre-trained model not found. Please run pretrain_hank.py first.")
         return
 
-    print("Starting Short Verification Training (Dry Run with Checkpointing)...")
+    print("Starting Full Training Run (20,000 Iterations)...")
     
-    # 2. Run for only 100 iterations to verify stability AND checkpointing
+    # 2. Run for 20,000 iterations (approx 2.5 hours on CPU)
     model.train_model(
-        iteration=100,      
+        iteration=20000,      
         batch=64, 
-        print_after=10,
-        save_every=50,      # <--- Test checkpointing every 50 steps
+        print_after=100,
+        save_every=1000,      # Save checkpoint every 1000 steps
         save_path="save"
     )
     

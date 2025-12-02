@@ -11,6 +11,7 @@ While the original repository provided a RANK example, this branch implements th
 - **Non-Linear Solution**: Solves for global policy functions, capturing the interaction between inequality and the Zero Lower Bound (ZLB).
 - **Wide Net Strategy**: Trains on a broad range of parameters ($\sigma \in [0.5, 5.0]$) to ensure robustness and avoid extrapolation.
 - **Monetary Shocks**: Includes monetary policy disturbances to capture interest rate volatility.
+- **Dynamic Distribution**: Implements a Reiter-style proxy to evolve agent heterogeneity endogenously with the business cycle.
 - **Neural Network Particle Filter**: A likelihood-based estimation method for non-linear heterogeneous agent models.
 
 ## Installation

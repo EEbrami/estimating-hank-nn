@@ -1,4 +1,3 @@
----
 
 # Permutation Invariance in Heterogeneous Agent Models: A Comparative Analysis of MLP and Set Transformer Architectures
 

@@ -2,7 +2,9 @@
 # Permutation Invariance in Heterogeneous Agent Models: A Comparative Analysis of MLP and Set Transformer Architectures
 
 **Author:** Ebrahim Ebrami
+
 **Date:** December 2025
+
 **Course:** Computational Methods in Economics
 
 ---
